@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Погода">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#070a12">
 <title>Weather Wall</title>
@@ -181,7 +183,18 @@
 
   /* Overlays */
   .night { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 1.5s; z-index: 5000; }
-  .night.on { opacity: 0.82; pointer-events: auto; }
+  .night.on { opacity: 0.85; pointer-events: auto; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); max-width: min(92vw, 34em); padding: 0.7em 1.1em; border-radius: 0.9em; background: rgba(17, 24, 39, 0.97); border: 1px solid rgba(236, 72, 153, 0.5); color: var(--text); font-size: clamp(13px, 1.7vmin, 19px); line-height: 1.4; text-align: center; z-index: 7000; opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .errbar { position: fixed; top: 0; left: 0; right: 0; z-index: 8000; display: none; padding: 8px 14px; background: #7f1d1d; color: #fee2e2; font-size: 12px; line-height: 1.35; -webkit-user-select: text; user-select: text; }
+  .errbar.on { display: block; }
+  .seg-row { display: flex; flex-wrap: wrap; }
+  .seg-row > * { margin: 0 0.4em 0.4em 0; }
+  .chip { padding: 0.45em 0.8em; border-radius: 0.7em; background: rgba(255,255,255,0.06); border: 1px solid var(--line-strong); font-size: 0.9em; font-weight: 600; }
+  .chip:active { background: rgba(236, 72, 153, 0.35); }
+  input[type=range] { width: 100%; accent-color: #ec4899; }
+  .sleep-state { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0.7em 0.9em; border-radius: 0.9em; background: rgba(0,0,0,0.3); border: 1px solid var(--line); }
+  .sleep-state b { font-size: 1.05em; }
   .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 6000; display: none; align-items: center; justify-content: center; padding: 16px; }
   .modal-bg.on { display: flex; }
   .modal { background: var(--panel-solid); border: 1px solid rgba(236,72,153,0.35); border-radius: 20px; padding: 1.4em; width: 100%; max-width: 34em; max-height: 90vh; overflow-y: auto; -webkit-user-select: text; user-select: text; }
@@ -261,7 +274,7 @@
       <div class="status" id="status"><span class="dot"></span><span id="statusText">Завантаження…</span></div>
       <button class="btn loc" id="locBtn" onclick="openSettings()">📍 <span id="locName" style="margin-left:.35em">…</span></button>
       <button class="btn" onclick="speak()" title="Озвучити">🔊</button>
-      <button class="btn" onclick="toggleNight()" title="Затемнити">🌙</button>
+      <button class="btn" id="sleepBtn" onclick="openSleep()" title="Сон екрана: розклад і яскравість">🌙</button>
       <button class="btn" onclick="refreshAll(true)" title="Оновити">🔄</button>
       <button class="btn" id="editBtn" onclick="toggleEdit()" title="Налаштувати розташування вікон">✎</button>
       <button class="btn" onclick="toggleFullscreen()" title="На весь екран">⛶</button>
@@ -365,6 +378,49 @@
   <button class="btn primary" onclick="toggleEdit()">✓ Готово</button>
 </div>
 
+<div class="modal-bg" id="sleepModal" onclick="if(event.target===this)closeSleep()">
+  <div class="modal">
+    <h3>🌙 Сон екрана</h3>
+    <div class="sleep-state"><span id="sleepInfo">…</span><button class="btn primary" id="sleepNowBtn" onclick="sleepToggleNow()">Заснути зараз</button></div>
+
+    <div class="field"><span>Гасити екран за розкладом</span>
+      <div class="row">
+        <label><input type="checkbox" id="slAuto" onchange="sleepChanged()"> увімкнено</label>
+      </div>
+      <div class="row">
+        <span>з</span><input type="time" id="slFrom" onchange="sleepChanged()">
+        <span>до</span><input type="time" id="slTo" onchange="sleepChanged()">
+      </div>
+      <div class="seg-row">
+        <button class="chip" onclick="sleepPreset('22:00','07:00')">22 – 7</button>
+        <button class="chip" onclick="sleepPreset('23:00','06:00')">23 – 6</button>
+        <button class="chip" onclick="sleepPreset('00:00','06:00')">0 – 6</button>
+        <button class="chip" onclick="sleepPreset('01:00','05:00')">1 – 5</button>
+      </div>
+      <div class="hint">Можна й через північ: наприклад з 23:00 до 06:00.</div>
+    </div>
+
+    <div class="field"><span>Наскільки темно: <b id="slLevelVal">85%</b> <small>(100% — повністю чорний)</small></span>
+      <input type="range" id="slLevel" min="30" max="100" step="5" oninput="sleepChanged(true)">
+    </div>
+
+    <div class="field"><span>Торкнутись екрана вночі — прокинеться на</span>
+      <div class="seg-row" id="slWakeRow">
+        <button class="chip" data-m="1" onclick="sleepWake(1)">1 хв</button>
+        <button class="chip" data-m="5" onclick="sleepWake(5)">5 хв</button>
+        <button class="chip" data-m="15" onclick="sleepWake(15)">15 хв</button>
+        <button class="chip" data-m="60" onclick="sleepWake(60)">1 год</button>
+      </div>
+    </div>
+
+    <div class="hint">Сторінка не може вимкнути екран планшета: вона робить його темним або чорним. Щоб підсвітка зовсім згасла, увімкни в самому планшеті автоблокування.</div>
+    <div style="margin-top:1.2em"><button class="btn primary" style="width:100%" onclick="closeSleep()">Готово</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="errbar" id="errBar" onclick="this.classList.remove('on')"></div>
+
 <div class="night" id="night" onclick="wakeFromNight()"></div>
 
 <div class="modal-bg" id="explainModal" onclick="if(event.target===this)closeModal('explainModal')">
@@ -395,15 +451,6 @@
       </div>
     </div>
 
-    <div class="field"><span>Нічне затемнення екрана</span>
-      <div class="row">
-        <label><input type="checkbox" id="setNight"> автоматично</label>
-        <span>з</span><input type="time" id="setNightFrom">
-        <span>до</span><input type="time" id="setNightTo">
-      </div>
-      <div class="hint">Вночі екран притухає. Торкнись — прокинеться на 1 хвилину.</div>
-    </div>
-
     <div class="row" style="margin-top:1.4em">
       <button class="btn primary" onclick="saveSettings()">Зберегти</button>
       <button class="btn" onclick="closeModal('settingsModal')">Скасувати</button>
@@ -422,7 +469,7 @@
 var DEFAULTS = {
   lat: 45.73, lon: 9.65, name: 'Sorisole',
   leave: '08:00', back: '18:00',
-  autoNight: true, nightFrom: '23:00', nightTo: '06:30',
+  autoNight: true, nightFrom: '23:00', nightTo: '06:00', nightLevel: 0.85, wakeMin: 1,
   mapZoom: 6, mapMode: 'clouds', windyOverlay: 'clouds'
 };
 var cfg = loadCfg();
@@ -527,13 +574,14 @@ function loadCache() {
 function loadWeather() {
   state.lastTry = Date.now();
   return fetchJson(weatherUrl(), 20000).then(function (w) {
-    state.w = w; state.lastOk = Date.now();
+    state.w = w; state.lastOk = Date.now(); state.limit = false;
     return fetchJson(aqiUrl(), 12000).then(function (a) { state.aqi = a; }, function () {});
   }).then(function () {
     try { localStorage.setItem('wos.cache', JSON.stringify({ w: state.w, aqi: state.aqi, t: state.lastOk, lat: cfg.lat, lon: cfg.lon })); } catch (e) {}
     render();
   }).catch(function (e) {
     console.warn('Weather fetch failed', e);
+    state.limit = /HTTP 429/.test(String(e));
     updateStatus();
     clearTimeout(state.retry);
     state.retry = setTimeout(loadWeather, 60000); // don't wait for the 10-minute cycle after a hiccup
@@ -892,7 +940,7 @@ function updateStatus() {
   var el = $('status'), txt = $('statusText');
   if (!state.lastOk) {
     el.className = 'status bad';
-    txt.textContent = state.lastTry ? 'Немає звʼязку' : 'Завантаження…';
+    txt.textContent = state.limit ? 'Ліміт сервісу погоди вичерпано (скинеться вночі)' : state.lastTry ? 'Немає звʼязку' : 'Завантаження…';
     return;
   }
   var t = new Date(state.lastOk);
@@ -1142,7 +1190,7 @@ function mercY(latDeg) { return Math.log(Math.tan(Math.PI / 4 + latDeg * Math.PI
 function fxRegionFor(view) {
   var b = view.pad(0.35);
   var south = Math.max(-80, b.getSouth()), north = Math.min(80, b.getNorth()), west = b.getWest(), east = b.getEast();
-  var cols = clamp(Math.ceil((east - west) / 0.4), 8, 14), rows = clamp(Math.ceil((north - south) / 0.4), 8, 14); // <=196 points: stays well under the free API limit
+  var cols = clamp(Math.ceil((east - west) / 0.8), 6, 9), rows = clamp(Math.ceil((north - south) / 0.8), 6, 9); // <= 81 points: the free API allows 10 000 point-calls a day PER IP, shared by every device at home
   return { south: south, north: north, west: west, east: east, cols: cols, rows: rows, dLat: (north - south) / (rows - 1), dLon: (east - west) / (cols - 1) };
 }
 function fxCovers(rg, v) { return v.getSouth() >= rg.south && v.getNorth() <= rg.north && v.getWest() >= rg.west && v.getEast() <= rg.east; }
@@ -1159,7 +1207,9 @@ function fxLoad(force) {
   fx.lastTry = Date.now();
   fx.loading = true;
   if (!fx.data) $('mapMsg').textContent = 'Завантажую прогноз…';
-  var rg = fxRegionFor(view), lats = [], lons = [];
+  var rg = fxRegionFor(view), lats = [], lons = [], hit = null, fetchedAt = Date.now();
+  try { hit = JSON.parse(localStorage.getItem('wos.grid') || 'null'); } catch (e) {}
+  if (hit && hit.rg && hit.arr && Date.now() - hit.at < 3 * 3600000 && fxCovers(hit.rg, view)) { rg = hit.rg; fetchedAt = hit.at; } else hit = null;
   for (var j = 0; j < rg.rows; j++) for (var i = 0; i < rg.cols; i++) {
     lats.push((rg.south + j * rg.dLat).toFixed(2));
     lons.push((rg.west + i * rg.dLon).toFixed(2));
@@ -1167,10 +1217,13 @@ function fxLoad(force) {
   var base = 'https://api.open-meteo.com/v1/forecast?latitude=' + lats.join(',') + '&longitude=' + lons.join(','), tail = '&forecast_hours=26&timeformat=unixtime&timezone=GMT';
   var vars = 'cloud_cover,precipitation,wind_speed_10m,wind_direction_10m';
   // 700 hPa (~3 km) wind steers clouds and rain much better than the 10 m wind; fall back if the API rejects it
-  fetchJson(base + '&hourly=' + vars + ',wind_speed_700hPa,wind_direction_700hPa' + tail, 40000).catch(function (e) {
+  (hit ? Promise.resolve(hit.arr) : fetchJson(base + '&hourly=' + vars + ',wind_speed_700hPa,wind_direction_700hPa' + tail, 40000).catch(function (e) {
     if (/HTTP 400/.test(String(e))) return fetchJson(base + '&hourly=' + vars + tail, 40000);
     throw e;
   }).then(function (arr) {
+    try { localStorage.setItem('wos.grid', JSON.stringify({ at: Date.now(), rg: rg, arr: arr })); } catch (e) {}
+    return arr;
+  })).then(function (arr) {
     if (!Array.isArray(arr)) arr = [arr];
     var N = rg.cols * rg.rows, times = arr[0].hourly.time, T = times.length;
     if (arr.length !== N || T < 26) throw new Error('bad grid');
@@ -1201,7 +1254,7 @@ function fxLoad(force) {
       for (n = 0; n < N; n++) { nu[n] = cu[t][n] + (u7[t][n] + u7[t + 1][n]) * 1800; nv[n] = cv[t][n] + (v7[t][n] + v7[t + 1][n]) * 1800; }
       cu.push(nu); cv.push(nv);
     }
-    fx.data = { region: rg, times: times, T: T, cc: cc, pr: pr, u: u, v: v, cx: cx, cy: cy, cu: cu, cv: cv, u0: u7[0], v0: v7[0], fetched: Date.now() };
+    fx.data = { region: rg, times: times, T: T, cc: cc, pr: pr, u: u, v: v, cx: cx, cy: cy, cu: cu, cv: cv, u0: u7[0], v0: v7[0], fetched: fetchedAt };
     fx.cur = new Float32Array(N); fx.curU = new Float32Array(N); fx.curV = new Float32Array(N);
     fx.t0 = clamp((Date.now() / 1000 - times[0]) / 3600, 0, 1);
     if (!(fx.tm >= fxLo() && fx.tm <= 21)) fx.tm = fxLo();
@@ -1211,9 +1264,10 @@ function fxLoad(force) {
   }).catch(function (e) {
     console.warn('Forecast grid failed', e);
     fx.loading = false;
-    if (!fx.data) $('mapMsg').textContent = 'Прогноз для карти тимчасово недоступний';
+    var limited = /HTTP 429/.test(String(e));
+    if (!fx.data) $('mapMsg').textContent = limited ? 'Ліміт сервісу прогнозу вичерпано — спробую пізніше' : 'Прогноз для карти тимчасово недоступний';
     clearTimeout(fx.loadTimer);
-    fx.loadTimer = setTimeout(function () { fxLoad(false); }, 75000); // retry
+    fx.loadTimer = setTimeout(function () { fxLoad(false); }, limited ? 600000 : 75000); // retry (10 min when rate-limited)
   });
 }
 
@@ -1620,7 +1674,6 @@ function openSettings() {
   $('cityResults').innerHTML = '';
   $('gpsHint').textContent = 'Зараз: ' + cfg.name + ' (' + cfg.lat.toFixed(2) + ', ' + cfg.lon.toFixed(2) + ')';
   $('setLeave').value = cfg.leave; $('setBack').value = cfg.back;
-  $('setNight').checked = !!cfg.autoNight; $('setNightFrom').value = cfg.nightFrom; $('setNightTo').value = cfg.nightTo;
   $('wakeHint').textContent = ('wakeLock' in navigator) ? (wakeLock ? '🔆 Екран не гасне (Wake Lock активний)' : '') :
     'Порада: щоб екран не гас, у налаштуваннях планшета вимкни автоблокування.';
   $('settingsModal').classList.add('on');
@@ -1674,9 +1727,6 @@ function saveSettings() {
   }
   cfg.leave = $('setLeave').value || DEFAULTS.leave;
   cfg.back = $('setBack').value || DEFAULTS.back;
-  cfg.autoNight = $('setNight').checked;
-  cfg.nightFrom = $('setNightFrom').value || DEFAULTS.nightFrom;
-  cfg.nightTo = $('setNightTo').value || DEFAULTS.nightTo;
   saveCfg();
   closeModal('settingsModal');
   nightManual = null; checkNight();
@@ -1707,16 +1757,65 @@ function inRange(nowMin, from, to) {
   var a = toMin(from), b = toMin(to);
   return a <= b ? (nowMin >= a && nowMin < b) : (nowMin >= a || nowMin < b);
 }
+var nightPreviewUntil = 0;
+function nightState() { // is the screen dimmed right now, and why
+  var n = new Date(), nm = n.getHours() * 60 + n.getMinutes();
+  var auto = !!cfg.autoNight && inRange(nm, cfg.nightFrom, cfg.nightTo);
+  return { auto: auto, on: $('night').classList.contains('on') };
+}
 function checkNight() {
   var n = new Date(), nm = n.getHours() * 60 + n.getMinutes();
   var auto = !!cfg.autoNight && inRange(nm, cfg.nightFrom, cfg.nightTo);
   if (auto !== nightAutoPrev) { nightManual = null; nightAutoPrev = auto; }
   var on = nightManual !== null ? nightManual : auto;
   if (Date.now() < wakeUntil || editing) on = false;
-  $('night').classList.toggle('on', on);
+  if (Date.now() < nightPreviewUntil) on = true; // brief preview while adjusting the darkness slider
+  var el = $('night');
+  el.classList.toggle('on', on);
+  el.style.opacity = on ? String(cfg.nightLevel) : '';
+  el.style.pointerEvents = (on && Date.now() >= nightPreviewUntil) ? 'auto' : 'none';
+  if (!on && $('sleepModal').classList.contains('on')) updateSleepInfo();
 }
-function toggleNight() { var on = $('night').classList.contains('on'); nightManual = !on; wakeUntil = 0; checkNight(); }
-function wakeFromNight() { wakeUntil = Date.now() + 60000; checkNight(); }
+function wakeFromNight() { wakeUntil = Date.now() + (cfg.wakeMin || 1) * 60000; checkNight(); }
+
+/* ---------- sleep settings dialog ---------- */
+function openSleep() {
+  $('slAuto').checked = !!cfg.autoNight;
+  $('slFrom').value = cfg.nightFrom; $('slTo').value = cfg.nightTo;
+  $('slLevel').value = Math.round(cfg.nightLevel * 100); $('slLevelVal').textContent = Math.round(cfg.nightLevel * 100) + '%';
+  markWake();
+  updateSleepInfo();
+  $('sleepModal').classList.add('on');
+}
+function closeSleep() { nightPreviewUntil = 0; closeModal('sleepModal'); checkNight(); }
+function markWake() {
+  var b = $('slWakeRow').querySelectorAll('button');
+  for (var i = 0; i < b.length; i++) b[i].style.borderColor = (+b[i].getAttribute('data-m') === cfg.wakeMin) ? 'var(--accent)' : '';
+}
+function sleepChanged(preview) {
+  cfg.autoNight = $('slAuto').checked;
+  cfg.nightFrom = $('slFrom').value || DEFAULTS.nightFrom;
+  cfg.nightTo = $('slTo').value || DEFAULTS.nightTo;
+  cfg.nightLevel = clamp(+$('slLevel').value / 100, 0.3, 1);
+  $('slLevelVal').textContent = Math.round(cfg.nightLevel * 100) + '%';
+  saveCfg();
+  if (preview) { nightPreviewUntil = Date.now() + 2500; setTimeout(checkNight, 2600); } // end the preview on time
+  nightManual = null; checkNight(); updateSleepInfo();
+}
+function sleepPreset(a, b) { $('slFrom').value = a; $('slTo').value = b; $('slAuto').checked = true; sleepChanged(); }
+function sleepWake(m) { cfg.wakeMin = m; saveCfg(); markWake(); }
+function sleepToggleNow() {
+  var on = $('night').classList.contains('on') && Date.now() >= nightPreviewUntil;
+  nightManual = !on; wakeUntil = 0; nightPreviewUntil = 0;
+  closeModal('sleepModal'); checkNight();
+  toast(on ? 'Екран прокинувся' : 'Екран затемнено. Торкнись, щоб прокинутись на ' + (cfg.wakeMin || 1) + ' хв');
+}
+function updateSleepInfo() {
+  var st = nightState(), sched = cfg.autoNight ? 'розклад ' + cfg.nightFrom + ' – ' + cfg.nightTo : 'розклад вимкнено';
+  var dim = st.on && Date.now() >= nightPreviewUntil;
+  $('sleepInfo').innerHTML = 'Зараз: <b>' + (dim ? 'затемнено' : 'екран увімкнено') + '</b><br><small style="color:var(--muted)">' + sched + '</small>';
+  $('sleepNowBtn').textContent = dim ? 'Прокинутись' : 'Заснути зараз';
+}
 setInterval(checkNight, 5000);
 
 var wakeLock = null;
@@ -1743,15 +1842,45 @@ function speak() {
   for (var i = 0; i < voices.length; i++) if (/^uk/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
   speechSynthesis.speak(u);
 }
+var toastTimer = null;
+function toast(msg) {
+  var el = $('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove('on'); }, 5200);
+}
 function toggleFullscreen() {
-  var d = document.documentElement;
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    (d.requestFullscreen || d.webkitRequestFullscreen || function () {}).call(d);
-  } else {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  var d = document.documentElement, isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  var req = d.requestFullscreen || d.webkitRequestFullscreen || d.msRequestFullscreen;
+  var standalone = window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isFs) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (standalone) { toast('Вже на весь екран: сторінка запущена як застосунок'); return; }
+  if (!req) {
+    toast(ios ? 'Цей Safari не вміє повний екран для сайтів. Натисни «Поділитись» → «На екран Додому» і запускай іконку: тоді буде на весь екран.' : 'Цей браузер не підтримує повний екран. Спробуй Chrome.');
+    return;
   }
+  try {
+    var p = req.call(d);
+    if (p && p.catch) p.catch(function () { toast('Браузер не дозволив повний екран. Спробуй ще раз або додай сторінку на екран «Додому».'); });
+  } catch (e) { toast('Повний екран не вдався: ' + e.message); }
   requestWakeLock();
 }
+
+// If something breaks on a device I cannot see, show it instead of failing silently
+window.addEventListener('error', function (e) {
+  if (/ResizeObserver/.test(e.message || '')) return;
+  var bar = $('errBar');
+  if (!bar) return;
+  bar.textContent = 'Помилка: ' + (e.message || 'невідома') + (e.lineno ? ' (рядок ' + e.lineno + ')' : '') + ' — торкнись, щоб сховати';
+  bar.classList.add('on');
+});
+window.addEventListener('unhandledrejection', function (e) {
+  var bar = $('errBar'), m = e.reason && (e.reason.message || String(e.reason));
+  if (!bar || !m || /HTTP 429|Failed to fetch|abort/i.test(m)) return;
+  bar.textContent = 'Помилка: ' + m + ' — торкнись, щоб сховати';
+  bar.classList.add('on');
+});
 
 function refreshAll(manual) {
   loadWeather();
