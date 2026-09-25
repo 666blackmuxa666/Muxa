@@ -41,6 +41,7 @@
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+  html.sysbar .app { padding-top: max(calc(var(--gap) + 22px), calc(env(safe-area-inset-top) + 6px)); }
   .num { font-variant-numeric: tabular-nums; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 
@@ -48,6 +49,8 @@
     height: 100vh; height: 100dvh;
     display: grid; grid-template-rows: auto minmax(0, 1fr); grid-gap: var(--gap);
     padding: var(--gap);
+    /* full screen / home-screen app: keep clear of the system status bar and rounded corners */
+    padding: max(var(--gap), calc(env(safe-area-inset-top) + 6px)) max(var(--gap), env(safe-area-inset-right)) max(var(--gap), env(safe-area-inset-bottom)) max(var(--gap), env(safe-area-inset-left));
     transition: transform 2s ease;
   }
 
@@ -133,6 +136,7 @@
   .map-zoom .btn { background: rgba(7, 10, 18, 0.85); margin-top: 0.4em; font-size: 1.15em; padding: 0; width: 2.4em; min-height: 2.4em; }
   .timeline { left: 0.7em; bottom: 0.7em; right: 4em; display: flex; align-items: center; max-width: 34em; background: rgba(7, 10, 18, 0.85); border: 1px solid var(--line-strong); border-radius: 0.9em; padding: 0.35em 0.7em 0.35em 0.35em; }
   .timeline .btn { min-height: 2em; min-width: 2em; padding: 0; border-radius: 0.6em; font-size: 0.85em; }
+  .drift-tag { left: 0.7em; bottom: 3.9em; display: none; font-size: 0.78em; color: #cbd5e1; background: rgba(7, 10, 18, 0.8); border: 1px solid var(--line-strong); border-radius: 0.7em; padding: 0.25em 0.6em; white-space: nowrap; }
   .tl-time { font-weight: 700; margin: 0 0.6em; font-size: 0.95em; white-space: nowrap; }
   .tl-track { flex: 1; display: flex; align-items: center; height: 1.6em; cursor: pointer; touch-action: none; }
   .tl-track i { flex: 1; height: 0.5em; margin: 0 1px; border-radius: 2px; background: rgba(255,255,255,0.14); display: block; }
@@ -343,6 +347,7 @@
           <button class="btn" onclick="zoomBy(1)">+</button>
           <button class="btn" onclick="zoomBy(-1)">−</button>
         </div>
+        <div class="map-ui drift-tag num" id="driftTag" title="Куди й як швидко хмари несе вітер на висоті ~3 км (за прогнозом)"></div>
         <div class="map-ui timeline" id="timeline">
           <button class="btn" id="playBtn" onclick="togglePlay()">❚❚</button>
           <span class="tl-time num" id="tlTime">--:--</span>
@@ -1029,6 +1034,7 @@ function setMapMode(mode, force) {
   $('map').style.visibility = isWindy ? 'hidden' : 'visible';
   $('windySub').style.display = isWindy ? 'flex' : 'none';
   $('timeline').style.display = isWindy ? 'none' : 'flex';
+  $('driftTag').style.display = 'none';
   $('mapZoom').style.display = isWindy ? 'none' : 'flex';
   $('mapMsg').textContent = '';
 
@@ -1076,27 +1082,31 @@ function refreshMapFrames() {
 /* =========================================================
    FORECAST LAYER: clouds / rain / wind for the next 12 hours.
 
-   One Open-Meteo request brings a coarse model grid (hourly values over the
-   visible area). Every animation frame that grid is interpolated smoothly —
-   bicubic in space, linear in time — and painted as ONE field. No synthetic
-   texture, no satellite picture on top: a single smooth layer, so nothing can
-   break into cells or show two pictures over each other.
+   One Open-Meteo request brings a model grid (hourly values over the visible
+   area). Every frame:
+   - the two neighbouring hours are slid along the steering wind (700 hPa)
+     towards each other and mixed, so cloud masses travel instead of fading;
+   - the model's cloud percentage is used as a threshold on one seamless
+     fractal texture that drifts with the same wind, which gives the clouds
+     their shape (30 % = scattered puffs, 100 % = overcast);
+   - everything is painted as ONE layer with light, relief and a soft shadow.
    ========================================================= */
 var FX_MODES = { clouds: 1, rain: 1, wind: 1 };
 var FX_HOURS = 12;     // how far ahead the animation runs
 var FX_SPEED = 1.4;    // forecast hours per real second
 var FX_HOLD = 1.2;     // pause on the last hour before looping
 var FX_LAPSE = 9000;   // simulated seconds per real second for the wind streaks
+var FX_POINTS = 256;   // forecast points per request (the free daily budget is shared by the whole home network)
 var fx = {
-  data: null, loading: false, lastTry: 0, loadTimer: 0, pane: null,
+  data: null, loading: false, lastTry: 0, loadTimer: 0, pane: null, no700: false,
   canvas: null, ctx: null, low: null, lctx: null, img: null,
   scale: 2, w: 0, h: 0, lw: 0, lh: 0, padX: 0, padY: 0,
-  t: 0, tm: 0, hold: 0, dirty: true, opac: null, tlKey: -1,
+  t: 0, t0: 0, tm: 0, hold: 0, ema: 0, slow: false, dirty: true, opac: null, tlKey: -1,
   lastTs: 0, lastDraw: 0, lastTl: 0,
-  colI: null, colW: null, colF: null, rowI: null, rowW: null, rowF: null,   // bilinear (wind particles)
-  colT: null, colC: null, rowT: null, rowC: null,                           // bicubic (the smooth field)
-  mpp: null, lonAt: null, latAt: null,
-  cur: null, curU: null, curV: null, val: null, rowBuf: null, parts: null
+  colI: null, colW: null, colF: null, rowI: null, rowW: null, rowF: null,   // bilinear (wind particles) + edge fade
+  cT0: null, cC0: null, rT0: null, rC0: null, R: null, hKey: -99, cellPxX: 1, cellPxY: 1,
+  mpp: null, lonAt: null, latAt: null, kmLon: 0, kmN: 0, kmY: null, kpp: 1,
+  curU: null, curV: null, val: null, val2: null, dens: null, rowBuf: null, parts: null
 };
 
 function fxPack(r, g, b, a) { return ((a & 255) << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255); }
@@ -1122,11 +1132,98 @@ var LUT_RAIN = [];
   }
 })();
 
+/* --- cloud texture: seamless fractal gradient noise (256x256), equalised to 0..1 so that
+       "value > 1 - cover" fills about `cover` of the area. Blurred copies (levels 1-4) are used
+       when zoomed out: the clouds keep their real size in km and fine detail never flickers. --- */
+var NOISE = null, NOISE_W = null, NOISE_MIX = null, WX = 0, WY = 0;
+function fxFbm(seed, octaves, gain) {
+  var N = 256, tex = new Float32Array(N * N), amp = 1, o, i, x, y;
+  function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+  for (o = 0; o < octaves; o++) {
+    var P = 4 << o, cell = N / P, gX = new Float32Array(P * P), gY = new Float32Array(P * P);
+    var ox = rnd() * N, oy = rnd() * N;   // every octave shifted, so their lattices never line up
+    for (i = 0; i < P * P; i++) { var ang = rnd() * Math.PI * 2; gX[i] = Math.cos(ang); gY[i] = Math.sin(ang); }
+    for (y = 0; y < N; y++) {
+      var fy = ((y + oy) % N) / cell, iy = Math.floor(fy), ty = fy - iy, y0 = (iy % P) * P, y1 = ((iy + 1) % P) * P;
+      var sy = ty * ty * ty * (ty * (ty * 6 - 15) + 10);
+      for (x = 0; x < N; x++) {
+        var fxx = ((x + ox) % N) / cell, ix = Math.floor(fxx), tx = fxx - ix, x0 = ix % P, x1 = (ix + 1) % P;
+        var sx = tx * tx * tx * (tx * (tx * 6 - 15) + 10);
+        var n00 = gX[y0 + x0] * tx + gY[y0 + x0] * ty, n10 = gX[y0 + x1] * (tx - 1) + gY[y0 + x1] * ty;
+        var n01 = gX[y1 + x0] * tx + gY[y1 + x0] * (ty - 1), n11 = gX[y1 + x1] * (tx - 1) + gY[y1 + x1] * (ty - 1);
+        var a0 = n00 + (n10 - n00) * sx, a1 = n01 + (n11 - n01) * sx;
+        tex[y * N + x] += (a0 + (a1 - a0) * sy) * amp;
+      }
+    }
+    amp *= gain;
+  }
+  return tex;
+}
+// every value becomes its rank, 0..1
+function fxEqualise(tex) {
+  var sorted = tex.slice().sort(), M = tex.length, i;
+  for (i = 0; i < M; i++) {
+    var v = tex[i], lo = 0, hi = M - 1;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (sorted[mid] < v) lo = mid + 1; else hi = mid; }
+    tex[i] = lo / (M - 1);
+  }
+  return tex;
+}
+// CDF of wa*U1 + wb*U2 for uniform U: turns a mix of two samples back into an even 0..1
+function fxMixLut(wa, wb) {
+  var L = new Float32Array(1024);
+  for (var i = 0; i < 1024; i++) {
+    var m = i / 1023, s = 0;
+    for (var k = 0; k < 64; k++) s += clamp01((m - wb * (k + 0.5) / 64) / wa);
+    L[i] = s / 64;
+  }
+  return L;
+}
+function fxNoiseInit() {
+  if (NOISE) return;
+  var lv = fxEqualise(fxFbm(20260925, 5, 0.55)), S = 256;
+  NOISE = [lv];
+  while (S > 16) {   // each level: half the size, averaged 2x2 (still seamless), equalised again
+    var h = S >> 1, nx = new Float32Array(h * h), x, y;
+    for (y = 0; y < h; y++) for (x = 0; x < h; x++)
+      nx[y * h + x] = lv[2 * y * S + 2 * x] + lv[2 * y * S + 2 * x + 1] + lv[(2 * y + 1) * S + 2 * x] + lv[(2 * y + 1) * S + 2 * x + 1];
+    lv = fxEqualise(nx); S = h;
+    NOISE.push(lv);
+  }
+  // a smooth two-channel texture that bends the cover's edges, so they never follow the forecast grid
+  var wa = fxEqualise(fxFbm(777, 3, 0.5)), wb = fxEqualise(fxFbm(4242, 3, 0.5));
+  NOISE_W = new Float32Array(65536 * 2);
+  for (var i = 0; i < 65536; i++) { NOISE_W[2 * i] = wa[i]; NOISE_W[2 * i + 1] = wb[i]; }
+  NOISE_MIX = fxMixLut(0.8, 0.2);
+}
+// bilinear, seamless sample of noise level `lvl`; u / v in level-0 texels (any value, it wraps)
+function fxTex(T, lvl, u, v) {
+  var S = 256 >> lvl, m = S - 1, sc = 1 / (1 << lvl);
+  u *= sc; v *= sc;
+  var iu = Math.floor(u), iv = Math.floor(v), du = u - iu, dv = v - iv;
+  var x0 = iu & m, x1 = (iu + 1) & m, r0 = (iv & m) * S, r1 = ((iv + 1) & m) * S;
+  var a = T[r0 + x0] + (T[r0 + x1] - T[r0 + x0]) * du, b = T[r1 + x0] + (T[r1 + x1] - T[r1 + x0]) * du;
+  return a + (b - a) * dv;
+}
+// the warp texture: both channels at once, into WX / WY
+function fxWarp(u, v) {
+  var iu = Math.floor(u), iv = Math.floor(v), du = u - iu, dv = v - iv, T = NOISE_W;
+  var x0 = (iu & 255) * 2, x1 = ((iu + 1) & 255) * 2, r0 = (iv & 255) * 512, r1 = ((iv + 1) & 255) * 512;
+  var a = T[r0 + x0] + (T[r0 + x1] - T[r0 + x0]) * du, b = T[r1 + x0] + (T[r1 + x1] - T[r1 + x0]) * du;
+  WX = a + (b - a) * dv;
+  a = T[r0 + x0 + 1] + (T[r0 + x1 + 1] - T[r0 + x0 + 1]) * du; b = T[r1 + x0 + 1] + (T[r1 + x1 + 1] - T[r1 + x0 + 1]) * du;
+  WY = a + (b - a) * dv;
+}
+
 function fxRegionFor(view) {
-  var b = view.pad(0.3);
+  var b = view.pad(0.2);
   var south = Math.max(-80, b.getSouth()), north = Math.min(80, b.getNorth()), west = b.getWest(), east = b.getEast();
-  // <= 100 points per request: the free API counts every point, and the daily budget is shared by the whole home network
-  var cols = clamp(Math.ceil((east - west) / 0.8), 6, 10), rows = clamp(Math.ceil((north - south) / 0.8), 6, 10);
+  var wKm = (east - west) * 111.32 * Math.cos((south + north) * Math.PI / 360), hKm = (north - south) * 110.57;
+  // spread the point budget to the shape of the area; closer than ~20 km is pointless (the models are 2-11 km)
+  var cols = clamp(Math.round(Math.sqrt(FX_POINTS * wKm / hKm)), 6, 24);
+  var rows = clamp(Math.floor(FX_POINTS / cols), 6, 24);
+  cols = Math.min(cols, Math.max(6, Math.ceil(wKm / 20) + 1));
+  rows = Math.min(rows, Math.max(6, Math.ceil(hKm / 20) + 1));
   return { south: south, north: north, west: west, east: east, cols: cols, rows: rows,
            dLat: (north - south) / (rows - 1), dLon: (east - west) / (cols - 1) };
 }
@@ -1145,7 +1242,7 @@ function fxLoad(force) {
   if (!fx.data) $('mapMsg').textContent = 'Завантажую прогноз…';
 
   var rg = fxRegionFor(view), lats = [], lons = [], hit = null, fetchedAt = Date.now(), i, j;
-  try { hit = JSON.parse(localStorage.getItem('wos.grid') || 'null'); } catch (e) {}
+  try { localStorage.removeItem('wos.grid'); hit = JSON.parse(localStorage.getItem('wos.grid2') || 'null'); } catch (e) {}
   if (hit && hit.rg && hit.arr && Date.now() - hit.at < 3 * 3600000 && fxCovers(hit.rg, view)) { rg = hit.rg; fetchedAt = hit.at; }
   else hit = null;
   for (j = 0; j < rg.rows; j++) for (i = 0; i < rg.cols; i++) {
@@ -1153,30 +1250,41 @@ function fxLoad(force) {
     lons.push((rg.west + i * rg.dLon).toFixed(2));
   }
   var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lats.join(',') + '&longitude=' + lons.join(',') +
-    '&hourly=cloud_cover,precipitation,wind_speed_10m,wind_direction_10m&forecast_hours=' + (FX_HOURS + 2) +
-    '&timeformat=unixtime&timezone=GMT';
+    '&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation,wind_speed_10m,wind_direction_10m' +
+    (fx.no700 ? '' : ',wind_speed_700hPa,wind_direction_700hPa') +
+    '&forecast_hours=' + (FX_HOURS + 5) + '&timeformat=unixtime&timezone=GMT';
 
   (hit ? Promise.resolve(hit.arr) : fetchJson(url, 40000).then(function (arr) {
-    try { localStorage.setItem('wos.grid', JSON.stringify({ at: Date.now(), rg: rg, arr: arr })); } catch (e) {}
+    try { localStorage.setItem('wos.grid2', JSON.stringify({ at: Date.now(), rg: rg, arr: arr })); } catch (e) {}
     return arr;
   })).then(function (arr) {
     if (!Array.isArray(arr)) arr = [arr];
     var N = rg.cols * rg.rows, times = arr[0].hourly.time, T = times.length, t, n;
-    if (arr.length !== N || T < FX_HOURS + 1) throw new Error('bad grid');
-    var cc = [], pr = [], u = [], v = [];
-    for (t = 0; t < T; t++) { cc.push(new Float32Array(N)); pr.push(new Float32Array(N)); u.push(new Float32Array(N)); v.push(new Float32Array(N)); }
+    if (arr.length !== N || T < FX_HOURS + 2) throw new Error('bad grid');
+    var lo = [], hi = [], pr = [], u = [], v = [], u7 = [], v7 = [], su = new Float32Array(T), sv = new Float32Array(T);
+    for (t = 0; t < T; t++) {
+      lo.push(new Float32Array(N)); hi.push(new Float32Array(N)); pr.push(new Float32Array(N));
+      u.push(new Float32Array(N)); v.push(new Float32Array(N)); u7.push(new Float32Array(N)); v7.push(new Float32Array(N));
+    }
     for (n = 0; n < N; n++) {
       var h = arr[n].hourly;
       for (t = 0; t < T; t++) {
         var sp = (h.wind_speed_10m[t] || 0) / 3.6, dir = (h.wind_direction_10m[t] || 0) * Math.PI / 180;
-        cc[t][n] = h.cloud_cover[t] || 0;
+        lo[t][n] = Math.max(h.cloud_cover_low[t] || 0, h.cloud_cover_mid[t] || 0);
+        hi[t][n] = h.cloud_cover_high[t] || 0;
         pr[t][n] = h.precipitation[t] || 0;
         u[t][n] = -sp * Math.sin(dir); v[t][n] = -sp * Math.cos(dir); // direction is where the wind comes FROM
+        // the clouds travel with the wind at ~3 km (700 hPa); without it, roughly twice the surface wind
+        var s7 = h.wind_speed_700hPa && h.wind_speed_700hPa[t], d7 = h.wind_direction_700hPa && h.wind_direction_700hPa[t];
+        if (s7 != null && d7 != null) { u7[t][n] = -s7 / 3.6 * Math.sin(d7 * Math.PI / 180); v7[t][n] = -s7 / 3.6 * Math.cos(d7 * Math.PI / 180); }
+        else { u7[t][n] = u[t][n] * 1.8; v7[t][n] = v[t][n] * 1.8; }
+        su[t] += u7[t][n]; sv[t] += v7[t][n];
       }
     }
-    fx.data = { region: rg, times: times, T: T, cc: cc, pr: pr, u: u, v: v, fetched: fetchedAt };
-    fx.cur = new Float32Array(N); fx.curU = new Float32Array(N); fx.curV = new Float32Array(N);
-    fx.t0 = clamp((Date.now() / 1000 - times[0]) / 3600, 0, 1);
+    for (t = 0; t < T; t++) { su[t] /= N; sv[t] /= N; }   // mean steering wind, for the "рух" tag
+    fx.data = { region: rg, times: times, T: T, lo: lo, hi: hi, pr: pr, u: u, v: v, u7: u7, v7: v7, su: su, sv: sv, fetched: fetchedAt };
+    fx.curU = new Float32Array(N); fx.curV = new Float32Array(N);
+    fx.t0 = fxNow();
     if (!(fx.tm >= 0 && fx.tm <= FX_HOURS)) fx.tm = 0;
     fx.loading = false;
     $('mapMsg').textContent = '';
@@ -1184,14 +1292,21 @@ function fxLoad(force) {
   }).catch(function (e) {
     console.warn('Forecast grid failed', e);
     fx.loading = false;
+    if (/HTTP 400/.test(String(e)) && !fx.no700) { fx.no700 = true; fx.lastTry = 0; fxLoad(true); return; }
     var limited = /HTTP 429/.test(String(e));
     if (!fx.data) $('mapMsg').textContent = limited ? 'Ліміт сервісу прогнозу вичерпано — спробую пізніше' : 'Прогноз для карти тимчасово недоступний';
     clearTimeout(fx.loadTimer);
     fx.loadTimer = setTimeout(function () { fxLoad(false); }, limited ? 600000 : 75000);
   });
 }
+// hours since the first hour of the grid = where "now" is (kept inside the data so +12 h still fits)
+function fxNow() {
+  var d = fx.data;
+  return d ? clamp((Date.now() / 1000 - d.times[0]) / 3600, 0, d.T - 1 - FX_HOURS) : 0;
+}
 
 function fxStart() {
+  fxNoiseInit();
   fx.lastTs = performance.now();
   fx.canvas.style.display = 'block';
   fx.tlKey = -1; fx.opac = null; fx.tm = 0; fx.hold = 0; fx.parts = null;
@@ -1211,111 +1326,218 @@ function fxRelayout() {
   if (!map || !FX_MODES[mapMode]) return;
   var size = map.getSize();
   if (size.x < 60 || size.y < 60) return;
-  fx.scale = size.x * size.y > 1200000 ? 3 : 2;   // the field is painted into this many-times-smaller raster
-  var padX = Math.round(size.x * 0.12), padY = Math.round(size.y * 0.12), s = fx.scale, x, y;
+  var padX = Math.round(size.x * 0.12), padY = Math.round(size.y * 0.12), x, y;
   fx.w = size.x + 2 * padX; fx.h = size.y + 2 * padY;
   fx.padX = padX; fx.padY = padY;
+  // the field is painted into a smaller raster (~110 000 pixels, half on a slow device) and scaled up smoothly
+  var s = fx.scale = clamp(Math.ceil(Math.sqrt(fx.w * fx.h / (fx.slow ? 55000 : 110000))), 2, 6);
   L.DomUtil.setPosition(fx.canvas, map.containerPointToLayerPoint([-padX, -padY]));
   fx.canvas.width = fx.w; fx.canvas.height = fx.h;
-  fx.lw = Math.ceil(fx.w / s); fx.lh = Math.ceil(fx.h / s);
-  fx.low.width = fx.lw; fx.low.height = fx.lh;
-  fx.img = fx.lctx.createImageData(fx.lw, fx.lh);
-  fx.val = new Float32Array(fx.lw * fx.lh);
+  var lw = fx.lw = Math.ceil(fx.w / s), lh = fx.lh = Math.ceil(fx.h / s), M = lw * lh;
+  fx.low.width = lw; fx.low.height = lh;
+  fx.img = fx.lctx.createImageData(lw, lh);
+  fx.dens = new Float32Array(M);
+  fx.val2 = new Float32Array(M);
+  fx.R = {};
+  ['lo', 'hi', 'pr', 'u7', 'v7'].forEach(function (k) { fx.R[k] = [new Float32Array(M), new Float32Array(M)]; });
+  fx.hKey = -99;
   var zoomScale = Math.pow(2, map.getZoom());
-  fx.lonAt = new Float32Array(fx.lw); fx.latAt = new Float32Array(fx.lh); fx.mpp = new Float32Array(fx.lh);
-  for (x = 0; x < fx.lw; x++) fx.lonAt[x] = map.containerPointToLatLng([(x + 0.5) * s - padX, 0]).lng;
-  for (y = 0; y < fx.lh; y++) {
+  fx.lonAt = new Float32Array(lw); fx.latAt = new Float32Array(lh); fx.mpp = new Float32Array(lh); fx.kmY = new Float64Array(lh);
+  for (x = 0; x < lw; x++) fx.lonAt[x] = map.containerPointToLatLng([(x + 0.5) * s - padX, 0]).lng;
+  for (y = 0; y < lh; y++) {
     fx.latAt[y] = map.containerPointToLatLng([0, (y + 0.5) * s - padY]).lat;
     fx.mpp[y] = 156543.03392 * Math.cos(fx.latAt[y] * Math.PI / 180) / zoomScale;
+    fx.kmY[y] = fx.latAt[y] * 110.57;
   }
+  // the texture lives in kilometres on the ground: it pans and zooms together with the map
+  fx.kmN = 111.32 * Math.cos(cfg.lat * Math.PI / 180);
+  fx.kpp = fx.mpp[lh >> 1] * s / 1000;   // km per raster pixel
   fxBuildIndex();
   fx.opac = null;
   fx.dirty = true;
 }
 
-// Catmull-Rom weights: a coarse grid resampled with these looks smooth and rounded,
-// with none of the diamond shapes plain bilinear leaves behind.
+// Per-pixel positions inside the forecast grid, bicubic taps, and the bilinear tables the wind streaks use.
 function fxBuildIndex() {
   if (!fx.data || !fx.lonAt) return;
-  var rg = fx.data.region;
-  function axis(n, at, origin, step, cells, out) {
-    out.I = new Int16Array(n); out.W = new Float32Array(n); out.F = new Float32Array(n);
-    out.T = new Int16Array(n * 4); out.C = new Float32Array(n * 4);
+  var rg = fx.data.region, lw = fx.lw, lh = fx.lh;
+  function axis(n, at, origin, step, cells, pre) {
+    var I = new Int16Array(n), W = new Float32Array(n), F = new Float32Array(n);
+    var T = new Int16Array(n * 4), C = new Float32Array(n * 4);
     for (var k = 0; k < n; k++) {
       var g = (at[k] - origin) / step, over = Math.max(-g, g - (cells - 1), 0);
-      var c = clamp(g, 0, cells - 1 - 1e-4), i0 = Math.floor(c), f = c - i0, f2 = f * f, f3 = f2 * f, m;
-      out.I[k] = i0; out.W[k] = f;
-      out.F[k] = 1 - clamp01(over / 1.2);
-      for (m = -1; m <= 2; m++) out.T[k * 4 + m + 1] = clamp(i0 + m, 0, cells - 1);
-      out.C[k * 4 + 0] = -0.5 * f3 + f2 - 0.5 * f;
-      out.C[k * 4 + 1] = 1.5 * f3 - 2.5 * f2 + 1;
-      out.C[k * 4 + 2] = -1.5 * f3 + 2 * f2 + 0.5 * f;
-      out.C[k * 4 + 3] = 0.5 * f3 - 0.5 * f2;
+      var c = clamp(g, 0, cells - 1 - 1e-4), i0 = Math.floor(c), f = c - i0, f2 = f * f, f3 = f2 * f, o = k * 4;
+      I[k] = i0; W[k] = f;
+      F[k] = 1 - clamp01(over / 1.2);
+      // Catmull-Rom: a coarse grid resampled with these looks smooth and rounded, no diamonds
+      T[o] = i0 > 0 ? i0 - 1 : 0; T[o + 1] = i0; T[o + 2] = i0 + 1; T[o + 3] = i0 + 2 < cells ? i0 + 2 : cells - 1;
+      C[o] = -0.5 * f3 + f2 - 0.5 * f;
+      C[o + 1] = 1.5 * f3 - 2.5 * f2 + 1;
+      C[o + 2] = -1.5 * f3 + 2 * f2 + 0.5 * f;
+      C[o + 3] = 0.5 * f3 - 0.5 * f2;
     }
+    fx[pre + 'I'] = I; fx[pre + 'W'] = W; fx[pre + 'F'] = F; fx[pre + 'T0'] = T; fx[pre + 'C0'] = C;
   }
-  var cx = {}, cy = {};
-  axis(fx.lw, fx.lonAt, rg.west, rg.dLon, rg.cols, cx);
-  axis(fx.lh, fx.latAt, rg.south, rg.dLat, rg.rows, cy);
-  fx.colI = cx.I; fx.colW = cx.W; fx.colF = cx.F; fx.colT = cx.T; fx.colC = cx.C;
-  fx.rowI = cy.I; fx.rowW = cy.W; fx.rowF = cy.F; fx.rowT = cy.T; fx.rowC = cy.C;
-  fx.rowBuf = new Float32Array(fx.lw * rg.rows);
+  axis(lw, fx.lonAt, rg.west, rg.dLon, rg.cols, 'col');
+  axis(lh, fx.latAt, rg.south, rg.dLat, rg.rows, 'row');
+  fx.cT0 = fx.colT0; fx.cC0 = fx.colC0; fx.rT0 = fx.rowT0; fx.rC0 = fx.rowC0;
+  fx.cellPxX = Math.abs(1 / ((fx.lonAt[1] - fx.lonAt[0]) / rg.dLon));        // raster px per grid cell
+  fx.cellPxY = Math.abs(1 / ((fx.latAt[0] - fx.latAt[1]) / rg.dLat || 1));
+  fx.rowBuf = new Float32Array(lw * rg.rows);
+  fx.hKey = -99;
 }
 
-// hourly grid blended at forecast hour t
+// hourly grid blended at forecast hour t (wind streaks)
 function fxBlend(arr, out, t) {
   var d = fx.data, a = clamp(Math.floor(t), 0, d.T - 2), f = clamp01(t - a), A = arr[a], B = arr[a + 1];
   for (var n = 0; n < out.length; n++) out[n] = A[n] + (B[n] - A[n]) * f;
 }
 
-// Resample fx.cur onto the raster: separable bicubic, rows first, then columns.
-function fxResample() {
-  var rg = fx.data.region, cols = rg.cols, rows = rg.rows, lw = fx.lw, lh = fx.lh;
-  var cur = fx.cur, buf = fx.rowBuf, val = fx.val, colT = fx.colT, colC = fx.colC, rowT = fx.rowT, rowC = fx.rowC;
-  var j, x, y, k = 0;
+// Resample one hourly grid onto the raster (separable bicubic).
+function fxResample(src, out) {
+  var rg = fx.data.region, cols = rg.cols, rows = rg.rows, lw = fx.lw, lh = fx.lh, buf = fx.rowBuf;
+  var cT = fx.cT0, cC = fx.cC0, rT = fx.rT0, rC = fx.rC0, j, x, y, k = 0;
   for (j = 0; j < rows; j++) {
     var base = j * cols, dst = j * lw;
     for (x = 0; x < lw; x++) {
       var o = x * 4;
-      buf[dst + x] = cur[base + colT[o]] * colC[o] + cur[base + colT[o + 1]] * colC[o + 1] +
-                     cur[base + colT[o + 2]] * colC[o + 2] + cur[base + colT[o + 3]] * colC[o + 3];
+      buf[dst + x] = src[base + cT[o]] * cC[o] + src[base + cT[o + 1]] * cC[o + 1] +
+                     src[base + cT[o + 2]] * cC[o + 2] + src[base + cT[o + 3]] * cC[o + 3];
     }
   }
   for (y = 0; y < lh; y++) {
-    var p = y * 4, r0 = rowT[p] * lw, r1 = rowT[p + 1] * lw, r2 = rowT[p + 2] * lw, r3 = rowT[p + 3] * lw;
-    var w0 = rowC[p], w1 = rowC[p + 1], w2 = rowC[p + 2], w3 = rowC[p + 3];
-    for (x = 0; x < lw; x++, k++) {
-      var v = buf[r0 + x] * w0 + buf[r1 + x] * w1 + buf[r2 + x] * w2 + buf[r3 + x] * w3;
-      val[k] = v < 0 ? 0 : v;
-    }
+    var p = y * 4, r0 = rT[p] * lw, r1 = rT[p + 1] * lw, r2 = rT[p + 2] * lw, r3 = rT[p + 3] * lw;
+    var w0 = rC[p], w1 = rC[p + 1], w2 = rC[p + 2], w3 = rC[p + 3];
+    for (x = 0; x < lw; x++, k++) out[k] = buf[r0 + x] * w0 + buf[r1 + x] * w1 + buf[r2 + x] * w2 + buf[r3 + x] * w3;
   }
 }
 
+// Rasters of hours a and a+1 (cover + the wind that carries it), rebuilt only when the hour changes.
+function fxHourRasters(a, clouds) {
+  var key = a * 2 + (clouds ? 1 : 0);
+  if (fx.hKey === key) return;
+  var d = fx.data, R = fx.R, step = fx.hKey === key - 2;   // moved on by one hour: B becomes A
+  (clouds ? ['lo', 'hi', 'u7', 'v7'] : ['pr', 'u7', 'v7']).forEach(function (name) {
+    var p = R[name];
+    if (step) { var tmp = p[0]; p[0] = p[1]; p[1] = tmp; }
+    else fxResample(d[name][a], p[0]);
+    fxResample(d[name][a + 1], p[1]);
+  });
+  fx.hKey = key;
+}
+
+// bilinear read of a raster at a fractional pixel position (clamped to the edge)
+var BW = 0, BH = 0;
+function fxBil(T, x, y) {
+  x = x < 0 ? 0 : x > BW - 1.001 ? BW - 1.001 : x;
+  y = y < 0 ? 0 : y > BH - 1.001 ? BH - 1.001 : y;
+  var ix = x | 0, iy = y | 0, fx_ = x - ix, fy = y - iy, k = iy * BW + ix;
+  var a = T[k] + (T[k + 1] - T[k]) * fx_, b = T[k + BW] + (T[k + BW + 1] - T[k + BW]) * fx_;
+  return a + (b - a) * fy;
+}
+
+/* Clouds / rain for forecast hour t. Everything is carried by the LOCAL wind at ~3 km:
+   - the cover of hour a is pushed forward along that wind and hour a+1 pulled back, then mixed,
+     so a cloud mass travels between the hours instead of fading out and in;
+   - the texture that gives the clouds their shape rides the same wind, in two overlapping
+     3-hour strokes (one takes over before the other gets stretched), so shape and cover move as one. */
+var FX_STROKE = 3;
 function fxDrawSky(env) {
-  var clouds = mapMode === 'clouds', lw = fx.lw, lh = fx.lh, val = fx.val;
-  fxBlend(clouds ? fx.data.cc : fx.data.pr, fx.cur, fx.t);
-  fxResample();
-  var buf = new Uint32Array(fx.img.data.buffer), colF = fx.colF, rowF = fx.rowF;
-  var eA = clamp01(env), x, y, k = 0;
-  for (y = 0; y < lh; y++) {
-    var fy = rowF[y], up = y > 0 ? -lw : 0, down = y < lh - 1 ? lw : 0;
+  var d = fx.data, clouds = mapMode === 'clouds', lw = fx.lw, lh = fx.lh, s = fx.scale;
+  var t = fx.t, a = clamp(Math.floor(t), 0, d.T - 2), f = clamp01(t - a), g = 1 - f;
+  fxHourRasters(a, clouds);
+  BW = lw; BH = lh;
+  var R = fx.R, A = clouds ? R.lo[0] : R.pr[0], B = clouds ? R.lo[1] : R.pr[1], HA = R.hi[0], HB = R.hi[1];
+  var UA = R.u7[0], UB = R.u7[1], VA = R.v7[0], VB = R.v7[1];
+  var dens = fx.dens, hcv = fx.val2, colF = fx.colF, rowF = fx.rowF, MIX = NOISE_MIX;
+
+  // the two strokes: how long each has been riding the wind, its weight, and a fresh offset per stroke
+  var q0 = t / FX_STROKE, q1 = q0 + 0.5, c0 = Math.floor(q0), c1 = Math.floor(q1), fr0 = q0 - c0, fr1 = q1 - c1;
+  var tau0 = fr0 * FX_STROKE, tau1 = fr1 * FX_STROKE, w0 = 1 - Math.abs(2 * fr0 - 1), w1 = 1 - w0;
+  var o0u = (c0 * 97.31) % 256, o0v = (c0 * 61.73) % 256, o1u = (c1 * 97.31 + 53.7) % 256, o1v = (c1 * 61.73 + 17.9) % 256;
+  var norm = 1 / Math.sqrt(w0 * w0 + w1 * w1), use0 = w0 > 0.02, use1 = w1 > 0.02;
+
+  // texture scale in km (fixed on the ground) and the blur level that suits this zoom
+  var tile = clouds ? 440 : 260, k1 = 256 / tile, texel = tile / 256, rk = fx.kpp * 0.7;
+  var lS = clamp(Math.ceil(Math.log2(rk / texel)), 0, 4), lDraw = Math.ceil(Math.log2(rk * 2.7 / texel));
+  var useD = lDraw <= 4, lD = clamp(lDraw, 0, 4), TS = NOISE[lS], TD = NOISE[lD];
+  var kw = k1 / 4, ampX = fx.cellPxX * 0.5, ampY = fx.cellPxY * 0.5;
+  var X0 = fx.lonAt[0] * fx.kmN, dX = (fx.lonAt[1] - fx.lonAt[0]) * fx.kmN;
+  var buf = new Uint32Array(fx.img.data.buffer), eA = clamp01(env), x, y, k;
+
+  // pass 1: cover (carried by the wind) + texture -> cloud density / rain intensity
+  for (y = 0, k = 0; y < lh; y++) {
+    var pk = 1000 / (fx.mpp[y] * s), Yk = fx.kmY[y], fy = rowF[y];
     for (x = 0; x < lw; x++, k++) {
-      var fade = colF[x] * fy * eA;
-      if (fade <= 0.004) { buf[k] = 0; continue; }
-      var v = val[k];
+      if (fy * colF[x] <= 0) { dens[k] = 0; hcv[k] = 0; continue; }
+      var ek = (UA[k] + (UB[k] - UA[k]) * f) * 3.6, nk = (VA[k] + (VB[k] - VA[k]) * f) * 3.6;   // km/h east, north
+      var Xk = X0 + x * dX, nsum = 0, wxs = 0, wys = 0, Xp, Yp, uu, vv, ns;
+      if (use0) {
+        Xp = Xk - ek * tau0; Yp = Yk - nk * tau0;
+        uu = (Xp * 0.825 - Yp * 0.565) * k1 + o0u; vv = (Xp * 0.565 + Yp * 0.825) * k1 + o0v;
+        ns = fxTex(TS, lS, uu, vv);
+        if (useD) ns = MIX[((0.8 * ns + 0.2 * fxTex(TD, lD, uu * 2.7 + 19, vv * 2.7 + 211)) * 1023) | 0];
+        fxWarp(Xp * kw * 0.9 + o0v, Yp * kw * 0.9 + o0u);
+        nsum += w0 * (ns - 0.5); wxs += w0 * (WX - 0.5); wys += w0 * (WY - 0.5);
+      }
+      if (use1) {
+        Xp = Xk - ek * tau1; Yp = Yk - nk * tau1;
+        uu = (Xp * 0.825 - Yp * 0.565) * k1 + o1u; vv = (Xp * 0.565 + Yp * 0.825) * k1 + o1v;
+        ns = fxTex(TS, lS, uu, vv);
+        if (useD) ns = MIX[((0.8 * ns + 0.2 * fxTex(TD, lD, uu * 2.7 + 19, vv * 2.7 + 211)) * 1023) | 0];
+        fxWarp(Xp * kw * 0.9 + o1v, Yp * kw * 0.9 + o1u);
+        nsum += w1 * (ns - 0.5); wxs += w1 * (WX - 0.5); wys += w1 * (WY - 0.5);
+      }
+      var n = 0.5 + nsum * norm;
+      n = n < 0 ? 0 : n > 1 ? 1 : n;
+      // cover: hour a pushed forward by f of an hour's travel, hour a+1 pulled back by the rest;
+      // read a little off position (the warp) so edges never trace the straight lines of the grid
+      var dxp = ek * pk, dyp = -nk * pk, bx = x + wxs * 2 * ampX, by = y + wys * 2 * ampY;
+      var xa = bx - f * dxp, ya = by - f * dyp, xb = bx + g * dxp, yb = by + g * dyp;
+      var cv = g * fxBil(A, xa, ya) + f * fxBil(B, xb, yb);
       if (clouds) {
-        var c = clamp01(v * 0.01);
-        var a = smoothstep(0.2, 0.82, c) * 0.74;   // thin cover stays see-through, so the map is still readable
-        if (a <= 0.004) { buf[k] = 0; continue; }
-        // light from the upper left: the slope of the cloud field gives soft relief without any fake texture
-        var sl = (val[k + up] - val[k + down]) + (val[k + (x > 0 ? -1 : 0)] - val[k + (x < lw - 1 ? 1 : 0)]);
-        var g = 146 + 96 * c + sl * 3.4;
-        g = g < 90 ? 90 : g > 252 ? 252 : g;
-        buf[k] = fxPack(g - 10, g - 4, g, (255 * a * fade) | 0);
-      } else {
-        var idx = Math.sqrt(v / 30) * 255;
-        var col = LUT_RAIN[idx > 255 ? 255 : idx | 0];
-        if (col[3] < 2) { buf[k] = 0; continue; }
-        buf[k] = fxPack(col[0] | 0, col[1] | 0, col[2] | 0, (col[3] * fade) | 0);
+        cv *= 0.01;
+        if (cv < 0.02) dens[k] = 0;
+        else {
+          var thr = 1.1 - 1.2 * (cv > 1 ? 1 : cv);
+          dens[k] = smoothstep(thr - 0.11, thr + 0.11, n) * (0.55 + 0.45 * n);
+        }
+        // high cloud: a thin veil with its own soft pattern (same texture, other threshold)
+        var hc = (g * fxBil(HA, xa, ya) + f * fxBil(HB, xb, yb)) * 0.01;
+        if (hc > 0.03) {
+          var th = 1.05 - 1.1 * (hc > 1 ? 1 : hc), nh = 1 - n;
+          hcv[k] = smoothstep(th - 0.35, th + 0.35, nh) * (0.1 + 0.12 * (hc > 1 ? 1 : hc));
+        } else hcv[k] = 0;
+      } else dens[k] = cv < 0.02 ? 0 : cv * (0.7 + 0.6 * n);   // rain: radar-like grain inside the area
+    }
+  }
+
+  if (!clouds) {
+    for (k = 0, y = 0; y < lh; y++) for (x = 0; x < lw; x++, k++) {
+      var fade = colF[x] * rowF[y] * eA, r = dens[k];
+      if (fade <= 0.004 || r < 0.03) { buf[k] = 0; continue; }
+      var idx = Math.sqrt(r / 30) * 255, col = LUT_RAIN[idx > 255 ? 255 : idx | 0];
+      if (col[3] < 2) { buf[k] = 0; continue; }
+      buf[k] = fxPack(col[0] | 0, col[1] | 0, col[2] | 0, (col[3] * fade) | 0);
+    }
+  } else {
+    // pass 2: light from the upper left, a soft shadow to the lower right, thin high cloud on top
+    var sh = Math.max(1, Math.round(7 / s)), shOff = sh * lw + sh;
+    for (y = 0, k = 0; y < lh; y++) {
+      var fyy = rowF[y], up2 = y > 1 ? -2 * lw : 0, dn2 = y < lh - 2 ? 2 * lw : 0;
+      for (x = 0; x < lw; x++, k++) {
+        var fd = colF[x] * fyy * eA;
+        if (fd <= 0.004) { buf[k] = 0; continue; }
+        var dL = dens[k], ds = (x >= sh && y >= sh) ? dens[k - shOff] : 0, ha = hcv[k];
+        if (dL < 0.004 && ds < 0.004 && ha < 0.004) { buf[k] = 0; continue; }
+        var lit = (dens[k + (x < lw - 2 ? 2 : 0)] - dens[k - (x > 1 ? 2 : 0)]) + (dens[k + dn2] - dens[k + up2]);
+        var lum = 204 + 40 * dL + 150 * lit;
+        lum = lum < 140 ? 140 : lum > 252 ? 252 : lum;
+        var ca = dL * 0.86, sa = ds * 0.3 * (1 - ca);
+        var pa = ca + sa, pR = (lum - 12) * ca + 8 * sa, pG = (lum - 5) * ca + 12 * sa, pB = lum * ca + 22 * sa;
+        if (ha > 0) { var ih = 1 - ha; pR = 232 * ha + pR * ih; pG = 238 * ha + pG * ih; pB = 250 * ha + pB * ih; pa = ha + pa * ih; }
+        if (pa < 0.004) { buf[k] = 0; continue; }
+        buf[k] = fxPack(pR / pa, pG / pa, pB / pa, (255 * pa * fd) | 0);
       }
     }
   }
@@ -1380,6 +1602,15 @@ function fxTimeline(force) {
   var when = new Date(Date.now() + fx.tm * 3600000);
   tl.textContent = DAYS_SHORT[when.getDay()] + ' ' + pad(when.getHours()) + ':' + pad(when.getMinutes()) +
     (fx.tm < 0.5 ? '  зараз' : '  +' + Math.round(fx.tm) + 'г');
+  // where the clouds are being carried (the same 700 hPa wind that moves them on the map)
+  var tag = $('driftTag'), d = fx.data;
+  if (mapMode === 'clouds' || mapMode === 'rain') {
+    var a = clamp(Math.floor(fx.t), 0, d.T - 2), fr = clamp01(fx.t - a);
+    var eu = d.su[a] + (d.su[a + 1] - d.su[a]) * fr, nv = d.sv[a] + (d.sv[a + 1] - d.sv[a]) * fr, kmh = Math.round(Math.sqrt(eu * eu + nv * nv) * 3.6);
+    var arrow = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'][Math.round((Math.atan2(eu, nv) * 180 / Math.PI + 360) % 360 / 45) % 8];
+    tag.textContent = (mapMode === 'rain' ? '🌧️' : '☁️') + ' рух ' + (kmh < 3 ? 'майже стоять' : arrow + ' ' + kmh + ' км/год');
+    tag.style.display = 'block';
+  } else tag.style.display = 'none';
   var idx = clamp(Math.floor(fx.tm / hi * hi), 0, hi - 1);
   if (force || idx !== fx.tlKey || !track.firstChild) {
     fx.tlKey = idx;
@@ -1395,8 +1626,11 @@ function fxLoop(ts) {
   var dt = Math.min(0.1, (ts - fx.lastTs) / 1000);
   fx.lastTs = ts;
   var hi = fxHi();
-  if (hi <= 0 || document.hidden || $('night').classList.contains('on') || !fx.img || !fx.colT) return;
+  if (hi <= 0 || document.hidden || $('night').classList.contains('on') || !fx.img || !fx.cT0) return;
   if (fx.tm < 0 || fx.tm > hi) fx.tm = 0;
+  // "now" moves on with the clock, also when the grid in the cache is a couple of hours old
+  var t0 = fxNow();
+  if (Math.abs(t0 - fx.t0) > 0.01) { fx.t0 = t0; fx.dirty = true; }
   if (playing) {
     if (fx.hold > 0) { fx.hold -= dt; if (fx.hold <= 0) fx.tm = 0; }
     else {
@@ -1413,7 +1647,13 @@ function fxLoop(ts) {
   if (ts - fx.lastDraw < (windMode ? 28 : 33)) return;
   fx.lastDraw = ts; fx.dirty = false;
   fx.t = fx.t0 + fx.tm;
-  if (windMode) fxWindFrame(dt); else fxDrawSky(env);
+  if (windMode) fxWindFrame(dt);
+  else {
+    var t1 = performance.now();
+    fxDrawSky(env);
+    fx.ema = fx.ema * 0.9 + (performance.now() - t1) * 0.1;
+    if (fx.ema > 20 && !fx.slow) { fx.slow = true; fxRelayout(); }   // too slow for this device: paint coarser
+  }
   if (ts - fx.lastTl > 150) { fx.lastTl = ts; fxTimeline(false); }
 }
 
@@ -1600,6 +1840,16 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { el.classList.remove('on'); }, 5200);
 }
+function markSysBar() {
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  var fs = document.fullscreenElement || document.webkitFullscreenElement;
+  document.documentElement.classList.toggle('sysbar', !!(ios && (standalone || fs)));
+}
+markSysBar();
+document.addEventListener('fullscreenchange', markSysBar);
+document.addEventListener('webkitfullscreenchange', markSysBar);
+
 function toggleFullscreen() {
   var d = document.documentElement, isFs = document.fullscreenElement || document.webkitFullscreenElement;
   var req = d.requestFullscreen || d.webkitRequestFullscreen || d.msRequestFullscreen;
