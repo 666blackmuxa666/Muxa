@@ -165,20 +165,24 @@
   /* Days */
   .week { display: flex; flex-direction: column; }
   .days { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 0.3em; }
-  .drow { flex: 1; min-height: 0; display: grid; grid-template-columns: 5.2em 2.2em 5.6em minmax(0, 1fr); align-items: center; border-top: 1px solid var(--line); padding: 0 0.4em; }
+  .drow { flex: 1; min-height: 0; display: grid; grid-template-columns: 5.2em 3em 5.6em minmax(0, 1fr); align-items: center; border-top: 1px solid var(--line); padding: 0 0.4em; }
   .drow:first-child { border-top: 0; }
   .dr-name { font-weight: 700; line-height: 1.15; white-space: nowrap; }
   .dr-name small { display: block; font-size: 0.68em; color: var(--dim); font-weight: 600; }
   .drow.tomorrow .dr-name { color: var(--accent); }
-  .dr-ic { font-size: 1.5em; text-align: center; }
+  .dr-ic { font-size: 2.3em; line-height: 1; text-align: center; }
   .dr-t { line-height: 1.1; white-space: nowrap; }
   .dr-t b { font-size: 1.1em; }
   .dr-t span { color: var(--dim); font-weight: 600; }
   .dr-t small { display: block; font-size: 0.68em; color: var(--sky); min-height: 1.1em; }
   .dr-hours { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .hc { text-align: center; line-height: 1.15; }
+  .hc em { display: block; font-style: normal; font-size: 2.05em; line-height: 1.1; margin: 0.04em 0; }
   .hc i { display: block; font-style: normal; font-size: 0.62em; color: var(--dim); }
-  .hc b { font-size: 0.85em; font-weight: 600; white-space: nowrap; }
+  .hc b { display: block; font-size: 0.98em; font-weight: 700; white-space: nowrap; }
+  .days.tight .dr-ic { font-size: 1.8em; }
+  .days.tight .hc em { display: inline; font-size: 1.4em; vertical-align: -0.12em; margin: 0 0.08em 0 0; }
+  .days.tight .hc b { display: inline; font-size: 0.9em; }
   .hc.past { opacity: 0.4; }
   .hc.empty { opacity: 0.25; }
 
@@ -255,7 +259,7 @@
     .widget[data-id="chart"] { aspect-ratio: 2 / 1; }
     .widget[data-id="week"] { aspect-ratio: 20 / 21; }
     .dr-hours { display: none; }
-    .drow { grid-template-columns: 1fr 2.2em 1fr; }
+    .drow { grid-template-columns: 1fr 3em 1fr; }
     .timeline { right: 3.8em; }
   }
 </style>
@@ -847,8 +851,8 @@ function renderChart() {
   var labelH = fs * 1.5;
   var baseY = Hh - labelH;
   var barMax = (baseY) * 0.32;
-  var iconY = fs * 1.2;
-  var lineTop = iconY + fs * 2.1;
+  var iconY = fs * 1.75;
+  var lineTop = iconY + fs * 2.3;
   var lineBot = baseY - barMax - fs * 0.6;
   if (lineBot - lineTop < 12) lineBot = lineTop + 12;
   var step = (W - pl - pr) / (N - 1);
@@ -907,7 +911,7 @@ function renderChart() {
     var hi = idx + i;
     svg += '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="' + (i === 0 ? fs / 3.2 : fs / 5) + '" fill="' + (i === 0 ? '#ec4899' : '#fbbf24') + '"/>';
     svg += '<text x="' + pts[i][0] + '" y="' + (pts[i][1] - fs * 0.6) + '" fill="#f8fafc" font-size="' + fs + '" font-weight="700" text-anchor="middle">' + round(H.temperature_2m[hi]) + '°</text>';
-    svg += '<text x="' + pts[i][0] + '" y="' + iconY + '" font-size="' + (fs * 1.15) + '" text-anchor="middle">' + icon(H.weather_code[hi], H.is_day[hi]) + '</text>';
+    svg += '<text x="' + pts[i][0] + '" y="' + iconY + '" font-size="' + (fs * 1.85) + '" text-anchor="middle">' + icon(H.weather_code[hi], H.is_day[hi]) + '</text>';
     svg += '<text x="' + pts[i][0] + '" y="' + (Hh - fs * 0.35) + '" fill="' + (i === 0 ? '#ec4899' : '#94a3b8') + '" font-size="' + (fs * 0.85) + '" font-weight="' + (i === 0 ? 700 : 500) + '" text-anchor="middle">' + (i === 0 ? 'Зараз' : hh(H.time[hi])) + '</text>';
   }
   svg += '</svg>';
@@ -923,9 +927,9 @@ function renderDays(w) {
     var hours = '';
     for (var h = 0; h < 24; h += 3) {
       var key = date + 'T' + pad(h) + ':00', k = H.time.indexOf(key);
-      if (k < 0) { hours += '<div class="hc empty"><i>' + pad(h) + ':00</i><b>·</b></div>'; continue; }
-      hours += '<div class="hc' + (key.slice(0, 13) < nowKey ? ' past' : '') + '"><i>' + pad(h) + ':00</i><b>' +
-        icon(H.weather_code[k], H.is_day[k]) + ' ' + round(H.temperature_2m[k]) + '°</b></div>';
+      if (k < 0) { hours += '<div class="hc empty"><i>' + pad(h) + ':00</i><em>·</em><b>&nbsp;</b></div>'; continue; }
+      hours += '<div class="hc' + (key.slice(0, 13) < nowKey ? ' past' : '') + '"><i>' + pad(h) + ':00</i><em>' +
+        icon(H.weather_code[k], H.is_day[k]) + '</em><b>' + round(H.temperature_2m[k]) + '°</b></div>';
     }
     html += '<div class="drow' + (i === 1 ? ' tomorrow' : '') + '">' +
       '<div class="dr-name">' + name + '<small>' + parseInt(date.slice(8, 10), 10) + '.' + date.slice(5, 7) + '</small></div>' +
@@ -935,6 +939,16 @@ function renderDays(w) {
       '<div class="dr-hours num">' + hours + '</div></div>';
   }
   $('days').innerHTML = html;
+  fitDays();
+}
+
+// Short rows (e.g. portrait) can't stack a big icon over the temperature: put them side by side
+function fitDays() {
+  var box = $('days'), row = box.firstChild;
+  if (!row) return;
+  box.classList.remove('tight');
+  var em = parseFloat(getComputedStyle(box).fontSize) || 12;
+  box.classList.toggle('tight', row.clientHeight < em * 4.4);
 }
 
 /* ---------- status ---------- */
@@ -2058,6 +2072,7 @@ function onCardResize(entries) {
     scaleWidget(el);
     if (id === 'chart') requestAnimationFrame(renderChart);
     else if (id === 'map') mapResized();
+    else if (id === 'week') fitDays();
   }
 }
 
