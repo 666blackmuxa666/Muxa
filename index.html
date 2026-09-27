@@ -87,10 +87,11 @@
   .label { font-size: 0.72em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 
   /* Now */
-  .now { display: grid; grid-template-columns: auto 1fr; align-items: center; grid-column-gap: 0.8em; }
-  .now-icon { font-size: 4.2em; line-height: 1; }
-  .now-temp { font-size: 4.6em; font-weight: 700; line-height: 0.95; letter-spacing: -0.03em; }
-  .now-desc { font-size: 1.2em; font-weight: 600; margin-top: 0.2em; }
+  .now { display: flex; align-items: center; justify-content: center; }
+  .now > div:last-child { text-align: center; margin-left: 0.6em; }
+  .now-icon { font-size: 6em; line-height: 1; }
+  .now-temp { font-size: 6.4em; font-weight: 700; line-height: 0.95; letter-spacing: -0.03em; }
+  .now-desc { font-size: 1.6em; font-weight: 600; margin-top: 0.2em; }
   .now-sub { color: var(--muted); font-size: 0.95em; margin-top: 0.15em; }
   .now-place { position: absolute; top: 0.9em; right: 1.1em; color: var(--dim); font-size: 0.8em; font-weight: 600; max-width: 45%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -343,7 +344,7 @@
   </header>
 
   <main class="board" id="board">
-    <div class="widget" data-id="now" data-rw="30" data-rh="8.4">
+    <div class="widget" data-id="now" data-rw="30" data-rh="11.5">
       <div class="w-card"><div class="w-scale now">
         <div class="now-place" id="nowPlace"></div>
         <div class="now-icon" id="nowIcon">·</div>
@@ -555,7 +556,7 @@ var DEFAULTS = {
   leave: '08:00', back: '18:00',
   autoNight: true, nightFrom: '23:00', nightTo: '06:00', nightLevel: 0.85, wakeMin: 1,
   mapZoom: 6, mapMode: 'clouds', windyOverlay: 'clouds',
-  tiles: { wind: 'wind', rain: 'rain', hum: 'hum', pres: 'pres', uv: 'uv', aqi: 'aqi', t7: 'rainNext', t8: 'feels', t9: 'moon', t10: 'pollen' },
+  tiles: { wind: 'wind', rain: 'rain', hum: 'hum', pres: 'pres', uv: 'uv', aqi: 'aqi', t7: 'car', t8: 'sunshine', t9: 'rainNext', t10: 'pollen' },
   city2: { name: 'Київ', lat: 50.45, lon: 30.52 },
   voice: '', vRate: 1, vPitch: 1, vChime: true, vMorning: false, vSaid: ''
 };
@@ -2699,10 +2700,10 @@ var WIDGETS = {
 };
 var GRIDS = { l: { cols: 24, rows: 18 }, p: { cols: 12, rows: 24 } };
 var DEFAULT_LAYOUT = { // [x, y, w, h]
-  l: { now: [0, 0, 8, 3], advice: [0, 3, 8, 6],
-       wind: [0, 9, 4, 3], rain: [4, 9, 4, 3], hum: [0, 12, 4, 3], pres: [4, 12, 4, 3], uv: [0, 15, 4, 3], aqi: [4, 15, 4, 3],
+  l: { now: [0, 0, 8, 5], advice: [0, 5, 8, 5],
+       wind: [0, 10, 4, 2], rain: [4, 10, 4, 2], hum: [0, 12, 4, 2], t7: [4, 12, 4, 2], uv: [0, 14, 4, 2], pres: [4, 14, 4, 2], t8: [0, 16, 4, 2], aqi: [4, 16, 4, 2],
        chart: [8, 0, 10, 5], week: [8, 5, 10, 13], map: [18, 0, 6, 18],
-       t7: [0, 0, 4, 3, 1], t8: [4, 0, 4, 3, 1], t9: [0, 3, 4, 3, 1], t10: [4, 3, 4, 3, 1] }, // extra windows start hidden
+       t9: [0, 0, 4, 2, 1], t10: [4, 0, 4, 2, 1] }, // extra windows start hidden
   p: { now: [0, 0, 6, 5], advice: [6, 0, 6, 5],
        wind: [0, 5, 4, 2], rain: [4, 5, 4, 2], hum: [8, 5, 4, 2], pres: [0, 7, 4, 2], uv: [4, 7, 4, 2], aqi: [8, 7, 4, 2],
        map: [0, 9, 12, 5], chart: [0, 14, 12, 4], week: [0, 18, 12, 6],
@@ -2900,30 +2901,65 @@ function onDown(ev) {
   drag = {
     id: id, el: el, mode: ev.target.closest('.s-rz') ? 'resize' : 'move',
     sx: ev.clientX, sy: ev.clientY, pid: ev.pointerId, m: boardMetrics(),
+    base: JSON.parse(JSON.stringify(layouts[orient])),
     orig: { x: r.x, y: r.y, w: r.w, h: r.h }, last: { x: r.x, y: r.y, w: r.w, h: r.h }
   };
   el.classList.add('dragging');
   try { sh.setPointerCapture(ev.pointerId); } catch (e) {}
   if (drag.mode === 'move') showGhost(drag.last);
 }
-function onMove(ev) {
-  if (!drag || ev.pointerId !== drag.pid) return;
-  var g = GRIDS[orient], L = layouts[orient], o = drag.orig, m = drag.m;
-  var dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
-  if (drag.mode === 'move') {
-    var want = { x: clamp(Math.round(o.x + dx / m.cw), 0, g.cols - o.w), y: clamp(Math.round(o.y + dy / m.ch), 0, g.rows - o.h), w: o.w, h: o.h };
-    drag.last = nearestFree(L, drag.id, want) || drag.last;
-    drag.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-    showGhost(drag.last);
-  } else {
-    var min = WIDGETS[drag.id].min, last = drag.last;
-    var w = clamp(Math.round(o.w + dx / m.cw), min[0], g.cols - o.x);
-    var h = clamp(Math.round(o.h + dy / m.ch), min[1], g.rows - o.y);
-    var tries = [{ x: o.x, y: o.y, w: w, h: h }, { x: o.x, y: o.y, w: w, h: last.h }, { x: o.x, y: o.y, w: last.w, h: h }];
-    for (var i = 0; i < tries.length; i++) {
-      if (!collides(L, drag.id, tries[i])) { drag.last = tries[i]; setRect(drag.el, tries[i]); break; }
+// Put `id` at `want` and shove every window it hits along `dir` (chain reaction). null if something falls off the board.
+function pushLayout(base, id, want, dir) {
+  var L = JSON.parse(JSON.stringify(base)), g = GRIDS[orient], queue = [id], guard = 0;
+  L[id].x = want.x; L[id].y = want.y; L[id].w = want.w; L[id].h = want.h;
+  while (queue.length) {
+    if (++guard > 300) return null;
+    var m = L[queue.shift()];
+    for (var k in L) {
+      var r = L[k];
+      if (k === id || r.hidden || r === m || !overlap(m, r)) continue;
+      if (dir === 'x+') r.x = m.x + m.w; else if (dir === 'x-') r.x = m.x - r.w;
+      else if (dir === 'y+') r.y = m.y + m.h; else r.y = m.y - r.h;
+      if (r.x < 0 || r.y < 0 || r.x + r.w > g.cols || r.y + r.h > g.rows) return null;
+      queue.push(k);
     }
   }
+  return L;
+}
+function tryPush(base, id, want, prefer) {
+  var order = { 'x+': ['x+', 'y+', 'y-', 'x-'], 'x-': ['x-', 'y+', 'y-', 'x+'], 'y+': ['y+', 'x+', 'x-', 'y-'], 'y-': ['y-', 'x+', 'x-', 'y+'] }[prefer];
+  if (!collides(base, id, want)) { var L0 = JSON.parse(JSON.stringify(base)); var r0 = L0[id]; r0.x = want.x; r0.y = want.y; r0.w = want.w; r0.h = want.h; return L0; }
+  for (var i = 0; i < order.length; i++) { var L = pushLayout(base, id, want, order[i]); if (L) return L; }
+  return null;
+}
+function placeOthers(L) {
+  var els = $('board').querySelectorAll('.widget[data-id]');
+  for (var i = 0; i < els.length; i++) {
+    var id = els[i].getAttribute('data-id');
+    if (id !== drag.id && L[id] && !L[id].hidden) setRect(els[i], L[id]);
+  }
+}
+function onMove(ev) {
+  if (!drag || ev.pointerId !== drag.pid) return;
+  var g = GRIDS[orient], o = drag.orig, m = drag.m, want, dir, L;
+  var dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+  if (drag.mode === 'move') {
+    want = { x: clamp(Math.round(o.x + dx / m.cw), 0, g.cols - o.w), y: clamp(Math.round(o.y + dy / m.ch), 0, g.rows - o.h), w: o.w, h: o.h };
+    dir = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'x+' : 'x-') : (dy >= 0 ? 'y+' : 'y-');
+    drag.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  } else {
+    var min = WIDGETS[drag.id].min;
+    want = { x: o.x, y: o.y, w: clamp(Math.round(o.w + dx / m.cw), min[0], g.cols - o.x), h: clamp(Math.round(o.h + dy / m.ch), min[1], g.rows - o.y) };
+    dir = (want.w - o.w) * m.cw >= (want.h - o.h) * m.ch ? 'x+' : 'y+';
+  }
+  if (want.x === drag.last.x && want.y === drag.last.y && want.w === drag.last.w && want.h === drag.last.h) return;
+  L = tryPush(drag.base, drag.id, want, dir);
+  if (!L && drag.mode === 'move') { var spot = nearestFree(drag.base, drag.id, want); if (spot) L = tryPush(drag.base, drag.id, spot, dir); }
+  if (!L) return; // nowhere to go: keep the previous arrangement
+  layouts[orient] = L;
+  drag.last = { x: L[drag.id].x, y: L[drag.id].y, w: L[drag.id].w, h: L[drag.id].h };
+  placeOthers(L);
+  if (drag.mode === 'move') showGhost(drag.last); else setRect(drag.el, drag.last);
 }
 function onUp(ev) {
   if (!drag || (ev.pointerId !== undefined && ev.pointerId !== drag.pid)) return;
