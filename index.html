@@ -34,7 +34,7 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: clamp(12px, 1.75vmin, 24px);
-    background: radial-gradient(1400px 900px at 10% -10%, #18223d 0%, var(--bg) 60%) fixed, var(--bg);
+    background: radial-gradient(1400px 900px at 10% -10%, var(--glow, #18223d) 0%, var(--bg) 60%) fixed, var(--bg);
     color: var(--text);
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
@@ -59,7 +59,7 @@
   .clock { display: flex; align-items: center; min-width: 0; }
   .clock-time { font-size: 3.1em; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
   .clock-sec { font-size: 0.4em; color: var(--accent); font-weight: 700; margin-left: 0.15em; vertical-align: top; }
-  .clock-side { margin-left: 0.9em; line-height: 1.3; }
+  .clock-side { margin-left: 0.9em; line-height: 1.3; white-space: nowrap; }
   .clock-date { font-size: 1.15em; font-weight: 600; }
   .clock-sun { color: var(--muted); font-size: 0.9em; }
   .top-right { display: flex; align-items: center; }
@@ -117,6 +117,7 @@
   .tile { display: flex; flex-direction: column; justify-content: center; padding: 0.6em 0.9em; cursor: pointer; }
   .tile:active { background: rgba(236, 72, 153, 0.12); }
   .tile-val { font-size: 1.65em; font-weight: 700; line-height: 1.15; margin-top: 0.1em; white-space: nowrap; }
+  .tile-val { overflow: hidden; text-overflow: ellipsis; }
   .tile-val small { font-size: 0.5em; color: var(--muted); font-weight: 600; margin-left: 0.2em; }
   .tile-sub { font-size: 0.82em; color: var(--muted); margin-top: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile-sub.good { color: var(--good); } .tile-sub.warn { color: var(--warn); } .tile-sub.bad { color: var(--bad); }
@@ -217,6 +218,58 @@
   .btn.primary { background: rgba(236, 72, 153, 0.35); border-color: rgba(236,72,153,0.6); }
   .hint { font-size: 0.78em; color: var(--dim); margin-top: 0.4em; line-height: 1.4; }
 
+  /* Header alerts */
+  .alert-pill { display: none; align-items: center; min-height: 2.6em; max-width: 17em; padding: 0 0.8em; border-radius: 0.8em; font-size: 0.9em; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(251, 191, 36, 0.14); border: 1px solid rgba(251, 191, 36, 0.55); color: #fde68a; }
+  .alert-pill.on { display: inline-flex; }
+  @media (max-width: 1280px) { .alert-pill.on + .status #statusText { display: none; } }
+  .alert-pill.bad { background: rgba(248, 113, 113, 0.16); border-color: rgba(248, 113, 113, 0.65); color: #fecaca; animation: alertGlow 2.6s ease-in-out infinite; }
+  @keyframes alertGlow { 50% { box-shadow: 0 0 14px rgba(248, 113, 113, 0.45); } }
+  .al { display: flex; align-items: flex-start; padding: 0.55em 0.2em; border-top: 1px solid var(--line); line-height: 1.35; }
+  .al:first-child { border-top: 0; }
+  .al > span { font-size: 1.6em; width: 1.6em; flex: none; }
+  .al.bad b { color: var(--bad); } .al.warn b { color: var(--warn); }
+
+  /* Metric picker */
+  .modal.wide { max-width: 54em; }
+  .pk-cat { margin: 1.1em 0 0.45em; font-weight: 700; color: var(--muted); font-size: 0.85em; }
+  .pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5em, 1fr)); grid-gap: 0.45em; }
+  .pk { display: flex; flex-direction: column; min-width: 0; text-align: left; padding: 0.55em 0.7em; border-radius: 0.8em; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line-strong); }
+  .pk:active { background: rgba(236, 72, 153, 0.25); }
+  .pk.on { border-color: var(--accent); background: rgba(236, 72, 153, 0.16); }
+  .pk-n { font-size: 0.75em; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pk-n i { font-style: normal; color: var(--accent); font-weight: 600; }
+  .pk b { font-size: 1.2em; margin-top: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pk b small { font-size: 0.6em; color: var(--muted); margin-left: 0.15em; }
+  .pk > small { font-size: 0.72em; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pk .arrow { font-size: 0.9em; }
+  .pk-city { margin-top: 0.6em; }
+  .pk-city input { margin-top: 0.2em; }
+
+  /* Day details */
+  .drow { cursor: pointer; border-radius: 0.5em; }
+  .drow:active { background: rgba(236, 72, 153, 0.1); }
+  #chart { cursor: pointer; }
+  .day-sum { display: flex; flex-wrap: wrap; margin: -0.2em 0 0.7em; }
+  .day-sum span { margin: 0.2em 0.4em 0.2em 0; padding: 0.3em 0.65em; border-radius: 0.7em; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); font-size: 0.88em; white-space: nowrap; }
+  .day-hours { max-height: 55vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .dh { display: grid; grid-template-columns: 3.4em 2.9em 3.2em 3.6em minmax(0, 1fr) 6.4em; align-items: center; padding: 0.25em 0.2em; border-top: 1px solid var(--line); }
+  .dh.head { border-top: 0; color: var(--dim); font-size: 0.72em; font-weight: 700; text-transform: uppercase; }
+  .dh.head span { font-size: 1em; }
+  .dh.nite { background: rgba(129, 140, 248, 0.06); }
+  .dh.past { opacity: 0.4; }
+  .dh .ic { font-size: 1.55em; text-align: center; line-height: 1.1; }
+  .dh .t { font-weight: 700; font-size: 1.1em; }
+  .dh .f { color: var(--muted); }
+  .dh .r { position: relative; color: #7dd3fc; font-size: 0.9em; white-space: nowrap; overflow: hidden; }
+  .dh .r i { position: absolute; left: 0; bottom: 0; height: 3px; border-radius: 2px; background: rgba(56, 189, 248, 0.6); }
+  .dh .r em { color: var(--dim); font-style: normal; }
+  .dh .w { color: var(--muted); text-align: right; font-size: 0.9em; white-space: nowrap; }
+  .dh .w b { display: inline-block; color: var(--sky); margin-left: 0.15em; }
+  .chk { display: flex; align-items: flex-start; margin-top: 0.45em; line-height: 1.35; }
+  .chk input { flex: none; margin: 0.2em 0.55em 0 0; width: 1.1em; height: 1.1em; accent-color: #ec4899; }
+  select { font: inherit; color: var(--text); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line-strong); border-radius: 0.7em; padding: 0.55em 0.8em; width: 100%; }
+  select option, select optgroup { background: #111827; color: var(--text); }
+
   /* ---------- EDIT MODE ---------- */
   .board.edit {
     background-image: linear-gradient(to right, rgba(255,255,255,0.07) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.07) 1px, transparent 1px);
@@ -230,6 +283,8 @@
   .editing .shield { display: block; }
   .s-name { position: absolute; left: 12px; top: 10px; right: 52px; font-size: 13px; font-weight: 700; color: #fbcfe8; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .s-x { position: absolute; top: 4px; right: 4px; width: 36px; height: 36px; border-radius: 10px; background: rgba(0,0,0,0.55); border: 1px solid var(--line-strong); font-size: 15px; line-height: 1; }
+  .s-sw { position: absolute; top: 4px; right: 44px; width: 36px; height: 36px; border-radius: 10px; background: rgba(236, 72, 153, 0.35); border: 1px solid rgba(236, 72, 153, 0.8); font-size: 16px; line-height: 1; }
+  .shield.has-sw .s-name { right: 88px; }
   .s-rz { position: absolute; right: 0; bottom: 0; width: 44px; height: 44px; cursor: nwse-resize; display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px 8px; font-size: 18px; color: #fff; background: linear-gradient(135deg, transparent 50%, rgba(236, 72, 153, 0.9) 50%); border-bottom-right-radius: calc(var(--r) - 2px); touch-action: none; }
   .ghost { display: none; pointer-events: none; z-index: 10; }
   .editing .ghost.on { display: block; }
@@ -276,9 +331,10 @@
       </div>
     </div>
     <div class="top-right">
+      <button class="alert-pill" id="alertPill" onclick="openAlerts()"></button>
       <div class="status" id="status"><span class="dot"></span><span id="statusText">Завантаження…</span></div>
       <button class="btn loc" id="locBtn" onclick="openSettings()">📍 <span id="locName" style="margin-left:.35em">…</span></button>
-      <button class="btn" onclick="speak()" title="Озвучити">🔊</button>
+      <button class="btn" id="speakBtn" onclick="speak()" title="Озвучити прогноз">🔊</button>
       <button class="btn" id="sleepBtn" onclick="openSleep()" title="Сон екрана: розклад і яскравість">🌙</button>
       <button class="btn" onclick="refreshAll(true)" title="Оновити">🔄</button>
       <button class="btn" id="editBtn" onclick="toggleEdit()" title="Налаштувати розташування вікон">✎</button>
@@ -309,24 +365,16 @@
       </div></div>
     </div>
 
-    <div class="widget half" data-id="wind" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('wind')"><div class="label">Вітер</div><div class="tile-val num" id="mWind">--</div><div class="tile-sub" id="mWindSub">--</div></div></div>
-    </div>
-    <div class="widget half" data-id="rain" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('rain')"><div class="label">Опади сьогодні</div><div class="tile-val num" id="mRain">--</div><div class="tile-sub" id="mRainSub">--</div></div></div>
-    </div>
-    <div class="widget half" data-id="hum" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('humidity')"><div class="label">Вологість</div><div class="tile-val num" id="mHum">--</div><div class="tile-sub" id="mHumSub">--</div></div></div>
-    </div>
-    <div class="widget half" data-id="pres" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('pressure')"><div class="label">Тиск</div><div class="tile-val num" id="mPres">--</div><div class="tile-sub" id="mPresSub">--</div></div></div>
-    </div>
-    <div class="widget half" data-id="uv" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('uv')"><div class="label">УФ-індекс</div><div class="tile-val num" id="mUv">--</div><div class="tile-sub" id="mUvSub">--</div></div></div>
-    </div>
-    <div class="widget half" data-id="aqi" data-rw="14" data-rh="5.3">
-      <div class="w-card"><div class="w-scale tile" onclick="explain('aqi')"><div class="label">Повітря</div><div class="tile-val num" id="mAqi">--</div><div class="tile-sub" id="mAqiSub">--</div></div></div>
-    </div>
+    <div class="widget half" data-id="wind" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="wind"></div></div></div>
+    <div class="widget half" data-id="rain" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="rain"></div></div></div>
+    <div class="widget half" data-id="hum" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="hum"></div></div></div>
+    <div class="widget half" data-id="pres" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="pres"></div></div></div>
+    <div class="widget half" data-id="uv" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="uv"></div></div></div>
+    <div class="widget half" data-id="aqi" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="aqi"></div></div></div>
+    <div class="widget half" data-id="t7" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="t7"></div></div></div>
+    <div class="widget half" data-id="t8" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="t8"></div></div></div>
+    <div class="widget half" data-id="t9" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="t9"></div></div></div>
+    <div class="widget half" data-id="t10" data-rw="14" data-rh="5.3"><div class="w-card"><div class="w-scale tile" data-slot="t10"></div></div></div>
 
     <div class="widget" data-id="map" data-rw="30" data-rh="30" data-fmin="11">
       <div class="w-card map-card"><div class="w-scale">
@@ -364,7 +412,7 @@
       <div class="w-card"><div class="w-scale chart-card">
         <div class="label">Наступні 24 години</div>
         <div class="chart-legend"><b style="color:var(--warm)">━</b> температура &nbsp; <b style="color:var(--sky)">▮</b> ймовірність опадів</div>
-        <div id="chart"></div>
+        <div id="chart" onclick="openDay(0)" title="Торкнись — погодинно"></div>
       </div></div>
     </div>
 
@@ -378,7 +426,7 @@
 </div>
 
 <div class="edit-bar" id="editBar">
-  <span class="eb-msg" id="ebMsg">Тягни вікно — переміщення · ◢ у кутку — розмір · ✕ — сховати</span>
+  <span class="eb-msg" id="ebMsg">Тягни вікно — переміщення · ◢ — розмір · ✕ — сховати · ⇄ — інший показник</span>
   <span id="trayHidden"></span>
   <button class="btn" id="resetBtn" onclick="resetLayout()">↺ Стандартно</button>
   <button class="btn primary" onclick="toggleEdit()">✓ Готово</button>
@@ -433,7 +481,25 @@
   <div class="modal">
     <h3 id="exTitle"></h3>
     <p id="exText"></p>
-    <div style="margin-top:1.2em"><button class="btn primary" style="width:100%" onclick="closeModal('explainModal')">Зрозуміло</button></div>
+    <div class="row" style="margin-top:1.2em"><button class="btn" id="exSwap">⇄ Показувати тут інше</button><button class="btn primary" style="flex:1" onclick="closeModal('explainModal')">Зрозуміло</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="tileModal" onclick="if(event.target===this)closeModal('tileModal')">
+  <div class="modal wide">
+    <h3>⇄ Що показувати в цьому віконці</h3>
+    <div class="hint" style="margin-top:0">Торкнись показника — він одразу стане у віконце. Цифри тут живі, на зараз. Більше віконець: ✎ → «+ …» внизу (спершу звільни місце, зменшивши інше вікно).</div>
+    <div id="tilePick"></div>
+    <div style="margin-top:1.2em"><button class="btn primary" style="width:100%" onclick="closeModal('tileModal')">Готово</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="dayModal" onclick="if(event.target===this)closeModal('dayModal')">
+  <div class="modal wide">
+    <h3 id="dayTitle"></h3>
+    <div class="day-sum" id="daySum"></div>
+    <div class="day-hours" id="dayHours"></div>
+    <div class="row" style="margin-top:1em"><button class="btn" onclick="speakText(daySpeech(dayShown))">🔊 Прочитати</button><button class="btn primary" style="flex:1" onclick="closeModal('dayModal')">Закрити</button></div>
   </div>
 </div>
 
@@ -457,6 +523,18 @@
       </div>
     </div>
 
+    <div class="field"><span>🔊 Голос</span>
+      <select id="voiceSel" onchange="voiceChanged()"></select>
+      <div class="row" style="margin-top:.6em">
+        <span>Швидкість</span><input type="range" id="vRate" min="0.7" max="1.3" step="0.05" style="width:8em" oninput="voiceChanged()">
+        <span>Тон</span><input type="range" id="vPitch" min="0.8" max="1.2" step="0.05" style="width:6em" oninput="voiceChanged()">
+        <button class="btn" onclick="speakTest()">▶ Прослухати</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="vChime" onchange="voiceChanged()"><span>Мелодія перед озвученням</span></label>
+      <label class="chk"><input type="checkbox" id="vMorning" onchange="voiceChanged()"><span>Вранці (5–11) перший дотик до екрана — голосове зведення на день</span></label>
+      <div class="hint" id="voiceHint"></div>
+    </div>
+
     <div class="row" style="margin-top:1.4em">
       <button class="btn primary" onclick="saveSettings()">Зберегти</button>
       <button class="btn" onclick="closeModal('settingsModal')">Скасувати</button>
@@ -476,7 +554,10 @@ var DEFAULTS = {
   lat: 45.73, lon: 9.65, name: 'Sorisole',
   leave: '08:00', back: '18:00',
   autoNight: true, nightFrom: '23:00', nightTo: '06:00', nightLevel: 0.85, wakeMin: 1,
-  mapZoom: 6, mapMode: 'clouds', windyOverlay: 'clouds'
+  mapZoom: 6, mapMode: 'clouds', windyOverlay: 'clouds',
+  tiles: { wind: 'wind', rain: 'rain', hum: 'hum', pres: 'pres', uv: 'uv', aqi: 'aqi', t7: 'rainNext', t8: 'feels', t9: 'moon', t10: 'pollen' },
+  city2: { name: 'Київ', lat: 50.45, lon: 30.52 },
+  voice: '', vRate: 1, vPitch: 1, vChime: true, vMorning: false, vSaid: ''
 };
 var cfg = loadCfg();
 var state = { w: null, aqi: null, idx: 0, lastOk: 0, lastTry: 0 };
@@ -486,6 +567,9 @@ function loadCfg() {
   try { c = JSON.parse(localStorage.getItem('wos.cfg') || '{}'); } catch (e) {}
   var out = {};
   for (var k in DEFAULTS) out[k] = (c[k] !== undefined && c[k] !== null) ? c[k] : DEFAULTS[k];
+  var t = {}; // tiles: keep the saved choices, add defaults for new windows
+  for (var id in DEFAULTS.tiles) t[id] = (out.tiles && out.tiles[id]) || DEFAULTS.tiles[id];
+  out.tiles = t;
   return out;
 }
 function saveCfg() { try { localStorage.setItem('wos.cfg', JSON.stringify(cfg)); } catch (e) {} }
@@ -560,13 +644,14 @@ tickClock();
 function weatherUrl() {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + cfg.lat + '&longitude=' + cfg.lon +
     '&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,weather_code,is_day,precipitation,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index' +
-    '&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_gusts_10m,is_day,pressure_msl,uv_index' +
+    '&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_gusts_10m,is_day,pressure_msl,uv_index,' +
+    'relative_humidity_2m,wind_speed_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,freezing_level_height,cape,shortwave_radiation,snowfall,snow_depth,soil_temperature_6cm' +
     '&minutely_15=precipitation' +
-    '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_gusts_10m_max' +
+    '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_gusts_10m_max,sunshine_duration,daylight_duration,snowfall_sum,shortwave_radiation_sum' +
     '&timezone=auto&past_hours=24&forecast_days=8&forecast_minutely_15=8';
 }
 function aqiUrl() {
-  return 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + cfg.lat + '&longitude=' + cfg.lon + '&current=pm10,pm2_5,european_aqi&timezone=auto';
+  return 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + cfg.lat + '&longitude=' + cfg.lon + '&current=european_aqi,pm10,pm2_5,ozone,nitrogen_dioxide,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto';
 }
 
 function loadCache() {
@@ -585,6 +670,7 @@ function loadWeather() {
   }).then(function () {
     try { localStorage.setItem('wos.cache', JSON.stringify({ w: state.w, aqi: state.aqi, t: state.lastOk, lat: cfg.lat, lon: cfg.lon })); } catch (e) {}
     render();
+    loadCity(false);
   }).catch(function (e) {
     console.warn('Weather fetch failed', e);
     state.limit = /HTTP 429/.test(String(e));
@@ -621,7 +707,9 @@ function render() {
   var dayMin = (toMin(ss) - toMin(sr));
   $('sunInfo').textContent = '🌅 ' + sr + ' · 🌇 ' + ss + ' · день ' + Math.floor(dayMin / 60) + ':' + pad(dayMin % 60);
 
-  renderMetrics(w, idx);
+  skyTint(C);
+  renderTiles(w, idx);
+  renderAlerts(w, idx);
   renderAdvice(w, idx);
   renderChart();
   renderDays(w);
@@ -630,57 +718,6 @@ function render() {
 function signedTemp(t) { return round(t) + '°'; }
 function toMin(s) { return parseInt(s.slice(0, 2), 10) * 60 + parseInt(s.slice(3, 5), 10); }
 
-function setSub(id, text, cls) { var el = $(id); el.textContent = text; el.className = 'tile-sub' + (cls ? ' ' + cls : ''); }
-
-function renderMetrics(w, idx) {
-  var C = w.current, H = w.hourly, D = w.daily;
-
-  // Wind
-  var dir = DIRS[Math.round(C.wind_direction_10m / 45) % 8];
-  $('mWind').innerHTML = round(C.wind_speed_10m) + '<small>км/год</small><span class="arrow" style="transform:rotate(' + (C.wind_direction_10m + 180) + 'deg)">↑</span>';
-  var g = round(C.wind_gusts_10m);
-  setSub('mWindSub', dir + ' · пориви ' + g, g >= 60 ? 'bad' : g >= 40 ? 'warn' : '');
-
-  // Rain today
-  var sum = D.precipitation_sum[0] || 0, pmax = D.precipitation_probability_max[0] || 0;
-  $('mRain').innerHTML = (sum >= 10 ? round(sum) : sum.toFixed(1)) + '<small>мм</small>';
-  setSub('mRainSub', 'ймовірність до ' + pmax + '%', pmax >= 60 ? 'warn' : '');
-
-  // Humidity
-  var dp = C.dew_point_2m;
-  var comfort = dp < 10 ? ['сухо', ''] : dp < 16 ? ['комфортно', 'good'] : dp < 20 ? ['волого', 'warn'] : ['задушливо', 'bad'];
-  $('mHum').innerHTML = round(C.relative_humidity_2m) + '<small>%</small>';
-  setSub('mHumSub', 'роса ' + round(dp) + '° · ' + comfort[0], comfort[1]);
-
-  // Pressure + 3h trend
-  var p = C.pressure_msl;
-  $('mPres').innerHTML = round(p) + '<small>гПа · ' + round(p * 0.750062) + ' мм</small>';
-  var past = idx >= 3 ? H.pressure_msl[idx - 3] : null;
-  if (past !== null && past !== undefined) {
-    var dP = H.pressure_msl[idx] - past;
-    if (dP <= -2) setSub('mPresSub', '↓ швидко падає (' + dP.toFixed(1) + ' за 3 год)', 'warn');
-    else if (dP <= -0.8) setSub('mPresSub', '↘ падає (' + dP.toFixed(1) + ' за 3 год)', '');
-    else if (dP >= 0.8) setSub('mPresSub', '↗ зростає (+' + dP.toFixed(1) + ' за 3 год)', 'good');
-    else setSub('mPresSub', '→ стабільний', '');
-  } else setSub('mPresSub', '—', '');
-
-  // UV
-  var uvNow = C.uv_index || 0, uvMax = D.uv_index_max[0] || 0;
-  $('mUv').innerHTML = round(uvNow) + '<small>зараз</small>';
-  var uvL = uvLevel(uvMax);
-  setSub('mUvSub', 'макс ' + round(uvMax) + ' · ' + uvL[0], uvL[1]);
-
-  // AQI
-  var a = state.aqi && state.aqi.current;
-  if (a && a.european_aqi !== null && a.european_aqi !== undefined) {
-    var L = aqiLevel(a.european_aqi);
-    $('mAqi').innerHTML = round(a.european_aqi) + '<small>EAQI</small>';
-    setSub('mAqiSub', L[0] + ' · PM2.5 ' + round(a.pm2_5), L[1]);
-  } else {
-    $('mAqi').textContent = '—';
-    setSub('mAqiSub', 'немає даних', '');
-  }
-}
 function uvLevel(u) {
   if (u < 3) return ['низький', 'good'];
   if (u < 6) return ['помірний', ''];
@@ -791,7 +828,7 @@ function renderAdvice(w, idx) {
     html += '<li class="' + items[z][2] + '"><span class="ic">' + items[z][0] + '</span><span>' + items[z][1] + '</span></li>';
   }
   $('adviceList').innerHTML = html;
-  state.speech = head + '. ' + items.map(function (x) { return x[1]; }).join('. ') + '.';
+  state.advice = { head: head, items: items.slice(0, 5) };
 
   // --- nowcast bars (next 2h in 15-min steps)
   if (M && M.precipitation) {
@@ -931,7 +968,7 @@ function renderDays(w) {
       hours += '<div class="hc' + (key.slice(0, 13) < nowKey ? ' past' : '') + '"><i>' + pad(h) + ':00</i><em>' +
         icon(H.weather_code[k], H.is_day[k]) + '</em><b>' + round(H.temperature_2m[k]) + '°</b></div>';
     }
-    html += '<div class="drow' + (i === 1 ? ' tomorrow' : '') + '">' +
+    html += '<div class="drow' + (i === 1 ? ' tomorrow' : '') + '" onclick="openDay(' + i + ')">' +
       '<div class="dr-name">' + name + '<small>' + parseInt(date.slice(8, 10), 10) + '.' + date.slice(5, 7) + '</small></div>' +
       '<div class="dr-ic">' + icon(D.weather_code[i], 1) + '</div>' +
       '<div class="dr-t num"><b>' + round(D.temperature_2m_max[i]) + '°</b> <span>' + round(D.temperature_2m_min[i]) + '°</span>' +
@@ -1679,6 +1716,8 @@ function openSettings() {
   $('cityResults').innerHTML = '';
   $('gpsHint').textContent = 'Зараз: ' + cfg.name + ' (' + cfg.lat.toFixed(2) + ', ' + cfg.lon.toFixed(2) + ')';
   $('setLeave').value = cfg.leave; $('setBack').value = cfg.back;
+  $('vRate').value = cfg.vRate; $('vPitch').value = cfg.vPitch; $('vChime').checked = !!cfg.vChime; $('vMorning').checked = !!cfg.vMorning;
+  fillVoices();
   $('wakeHint').textContent = ('wakeLock' in navigator) ? (wakeLock ? '🔆 Екран не гасне (Wake Lock активний)' : '') :
     'Порада: щоб екран не гас, у налаштуваннях планшета вимкни автоблокування.';
   $('settingsModal').classList.add('on');
@@ -1744,15 +1783,722 @@ function saveSettings() {
 }
 function closeModal(id) { $(id).classList.remove('on'); }
 
-var EXPLAIN = {
-  wind: ['Вітер', 'Середня швидкість на висоті 10 м. Стрілка показує, куди дме вітер. Пориви — короткі посилення: від 40 км/год парасолька вивертається, від 60 — ламаються гілки.'],
-  rain: ['Опади сьогодні', 'Скільки міліметрів опадів очікується за весь день. 1 мм — ледь мокрий асфальт, 5 мм — помітний дощ, 20+ мм — злива.'],
-  humidity: ['Вологість і точка роси', 'Точка роси краще за вологість показує, як почувається повітря: до 10° — сухо, 10–16° — комфортно, 16–20° — волого, понад 20° — задушливо.'],
-  pressure: ['Атмосферний тиск', 'Приведений до рівня моря. Норма ≈1013 гПа (760 мм). Швидке падіння за 3 години часто означає наближення дощу чи вітру, зростання — прояснення.'],
-  uv: ['УФ-індекс', '0–2 низький, 3–5 помірний (крем у полудень), 6–7 високий, 8–10 дуже високий, 11+ екстремальний. Показано поточне значення і максимум дня.'],
-  aqi: ['Якість повітря (EAQI)', 'Європейський індекс: 0–20 добре, 20–40 задовільно, 40–60 помірно, 60–80 погано, 80–100 дуже погано. PM2.5 — дрібний пил у мкг/м³.']
+/* =========================================================
+   TILES: every small window shows one metric from a catalogue.
+   The window ids (wind, rain, … t10) stay the same so saved layouts keep working;
+   cfg.tiles says which metric each of them shows.
+   ========================================================= */
+var SLOTS = ['wind', 'rain', 'hum', 'pres', 'uv', 'aqi', 't7', 't8', 't9', 't10'];
+var CATS = [['weather', '🌡️ Погода'], ['wet', '🌧️ Опади й небезпеки'], ['sky', '☀️ Сонце й небо'], ['air', '🍃 Повітря'], ['life', '🏡 Побут'], ['other', '🌍 Інше']];
+var POLLEN = [['alder_pollen', 'вільха'], ['birch_pollen', 'береза'], ['grass_pollen', 'злаки'], ['mugwort_pollen', 'полин'], ['olive_pollen', 'оливка'], ['ragweed_pollen', 'амброзія']];
+var DAYS_ACC = ['у неділю', 'у понеділок', 'у вівторок', 'у середу', 'у четвер', 'у пʼятницю', 'у суботу'];
+var CITY_PRESETS = [['Київ', 50.45, 30.52], ['Львів', 49.84, 24.03], ['Одеса', 46.48, 30.72], ['Харків', 49.99, 36.23], ['Дніпро', 48.46, 35.05], ['Мілан', 45.46, 9.19]];
+
+function num(v) { return v !== null && v !== undefined && !isNaN(v); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+function plural(n, f1, f2, f5) {
+  n = Math.abs(Math.round(n)) % 100;
+  var n1 = n % 10;
+  if (n > 10 && n < 20) return f5;
+  return n1 === 1 ? f1 : (n1 >= 2 && n1 <= 4) ? f2 : f5;
+}
+function fmtInt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function minToHM(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+function durHM(sec) { var m = Math.round(sec / 60); return Math.floor(m / 60) + ':' + pad(m % 60); }
+function inDays(d) { var n = Math.round(d); return n <= 0 ? 'сьогодні' : n === 1 ? 'завтра' : 'через ' + n + ' ' + plural(n, 'день', 'дні', 'днів'); }
+function nextN(x, n) { return Math.min(x.idx + n, x.H.time.length - 1); }
+function maxAt(arr, a, b) { var m = -1e9, at = a; for (var i = a; i <= b; i++) if (num(arr[i]) && arr[i] > m) { m = arr[i]; at = i; } return [m, at]; }
+function minAt(arr, a, b) { var m = 1e9, at = a; for (var i = a; i <= b; i++) if (num(arr[i]) && arr[i] < m) { m = arr[i]; at = i; } return [m, at]; }
+function dayWord(D, t) { // '' for today, 'завтра ' / 'Пн ' for later hours
+  var d = t.slice(0, 10);
+  return d === D.time[0] ? '' : d === D.time[1] ? 'завтра ' : DAYS_SHORT[dayOf(d)] + ' ';
+}
+function comfortOf(dp) { return dp < 10 ? ['сухо', ''] : dp < 16 ? ['комфортно', 'good'] : dp < 20 ? ['волого', 'warn'] : ['задушливо', 'bad']; }
+function band(v, steps, labels) { for (var i = 0; i < steps.length; i++) if (v <= steps[i]) return labels[i]; return labels[labels.length - 1]; }
+var AIR_WORDS = [['добре', 'good'], ['задовільно', 'good'], ['помірно', ''], ['погано', 'warn'], ['дуже погано', 'bad']];
+
+function moonInfo(date) {
+  var LUN = 29.530588853, age = ((date.getTime() / 86400000 - 10962.7597) % LUN + LUN) % LUN; // from the new moon of 6 Jan 2000
+  var PH = [['🌑', 'Новий місяць'], ['🌒', 'Молодий місяць'], ['🌓', 'Перша чверть'], ['🌔', 'Зростаючий'], ['🌕', 'Повня'], ['🌖', 'Спадаючий'], ['🌗', 'Остання чверть'], ['🌘', 'Старий місяць']];
+  var p = PH[Math.floor(age / LUN * 8 + 0.5) % 8];
+  return { icon: p[0], name: p[1], ill: (1 - Math.cos(2 * Math.PI * age / LUN)) / 2, toFull: ((LUN / 2 - age) + LUN) % LUN, toNew: LUN - age };
+}
+
+// Each metric: n = name, c = category, ex = explanation, f(x) -> { v: value html, s: subline, k: good|warn|bad, l: label override }
+var METRICS = {
+  /* --- weather --- */
+  wind: { n: 'Вітер', c: 'weather', ex: 'Середня швидкість на висоті 10 м. Стрілка показує, куди дме вітер. Пориви — короткі посилення: від 40 км/год парасолька вивертається, від 60 — ламаються гілки.',
+    f: function (x) {
+      var C = x.C, g = round(C.wind_gusts_10m);
+      return { v: round(C.wind_speed_10m) + '<small>км/год</small><span class="arrow" style="transform:rotate(' + (C.wind_direction_10m + 180) + 'deg)">↑</span>',
+        s: DIRS[Math.round(C.wind_direction_10m / 45) % 8] + ' · пориви ' + g, k: g >= 60 ? 'bad' : g >= 40 ? 'warn' : '' };
+    } },
+  gusts: { n: 'Пориви вітру', c: 'weather', ex: 'Найсильніші короткі пориви зараз і найбільший за 12 годин. 40+ км/год — незручно з парасолькою, 60+ — можуть ламатися гілки, 80+ — небезпечно.',
+    f: function (x) {
+      var m = maxAt(x.H.wind_gusts_10m, x.idx, nextN(x, 12));
+      return { v: round(x.C.wind_gusts_10m) + '<small>км/год</small>', s: 'до ' + round(m[0]) + ' о ' + hh(x.H.time[m[1]]), k: m[0] >= 60 ? 'bad' : m[0] >= 40 ? 'warn' : '' };
+    } },
+  feels: { n: 'Відчувається', c: 'weather', ex: 'Температура, яку відчуває тіло з урахуванням вітру, вологості й сонця. Вітер холодить, а волога спека здається ще спекотнішою.',
+    f: function (x) {
+      var a = x.C.apparent_temperature, d = a - x.C.temperature_2m;
+      return { v: round(a) + '°', s: d <= -1.5 ? 'вітер холодить на ' + round(-d) + '°' : d >= 1.5 ? 'на ' + round(d) + '° тепліше, ніж на термометрі' : 'як на термометрі' };
+    } },
+  hum: { n: 'Вологість', c: 'weather', ex: 'Відносна вологість повітря. Під нею — точка роси: до 10° сухо, 10–16° комфортно, 16–20° волого, понад 20° задушливо.',
+    f: function (x) {
+      var dp = x.C.dew_point_2m, cf = comfortOf(dp);
+      return { v: round(x.C.relative_humidity_2m) + '<small>%</small>', s: 'роса ' + round(dp) + '° · ' + cf[0], k: cf[1] };
+    } },
+  dew: { n: 'Точка роси', c: 'weather', ex: 'Температура, за якої випадає роса. Краще за вологість показує, як почувається повітря: до 10° сухо, 10–16° комфортно, 16–20° волого, понад 20° задушливо. Коли температура майже дорівнює точці роси, чекай туману.',
+    f: function (x) {
+      var dp = x.C.dew_point_2m, cf = comfortOf(dp), gap = x.C.temperature_2m - dp;
+      return { v: round(dp) + '°', s: cf[0] + (gap < 2.5 ? ' · можливий туман' : ' · до роси ' + round(gap) + '°'), k: cf[1] };
+    } },
+  pres: { n: 'Тиск', c: 'weather', ex: 'Приведений до рівня моря. Норма ≈1013 гПа (760 мм). Швидке падіння за 3 години часто означає наближення дощу чи вітру, зростання — прояснення.',
+    f: function (x) {
+      var p = x.C.pressure_msl, H = x.H, r = { v: round(p) + '<small>гПа · ' + round(p * 0.750062) + ' мм</small>', s: '—' };
+      if (x.idx >= 3 && num(H.pressure_msl[x.idx - 3])) {
+        var d = H.pressure_msl[x.idx] - H.pressure_msl[x.idx - 3];
+        if (d <= -2) { r.s = '↓ швидко падає (' + d.toFixed(1) + ' за 3 год)'; r.k = 'warn'; }
+        else if (d <= -0.8) r.s = '↘ падає (' + d.toFixed(1) + ' за 3 год)';
+        else if (d >= 0.8) { r.s = '↗ зростає (+' + d.toFixed(1) + ' за 3 год)'; r.k = 'good'; }
+        else r.s = '→ стабільний';
+      }
+      return r;
+    } },
+  clouds: { n: 'Хмарність', c: 'weather', ex: 'Яка частина неба затягнута. Нижче — окремо низькі (до ~2 км, сірі й щільні), середні (2–6 км) і високі (перисті, тонкі — сонце крізь них світить).',
+    f: function (x) {
+      var H = x.H, i = x.idx;
+      return { v: round(x.C.cloud_cover) + '<small>%</small>', s: 'низ ' + round(H.cloud_cover_low[i]) + ' · сер ' + round(H.cloud_cover_mid[i]) + ' · вис ' + round(H.cloud_cover_high[i]) };
+    } },
+  vis: { n: 'Видимість', c: 'weather', ex: 'Як далеко видно. 20+ км — чудово видно гори, 4–10 км — серпанок, менше 1 км — туман, обережно на дорозі.',
+    f: function (x) {
+      var v = x.H.visibility[x.idx];
+      if (!num(v)) return null;
+      var km = v / 1000, L = km >= 20 ? ['чудова, видно гори', 'good'] : km >= 10 ? ['добра', ''] : km >= 4 ? ['серпанок', ''] : km >= 1 ? ['імла', 'warn'] : ['туман', 'bad'];
+      return { v: (km >= 10 ? round(km) : km.toFixed(1)) + '<small>км</small>', s: L[0], k: L[1] };
+    } },
+  yday: { n: 'Проти вчора', c: 'weather', ex: 'Наскільки зараз тепліше чи холодніше, ніж учора о цій самій годині.',
+    f: function (x) {
+      var j = x.idx - 24;
+      if (j < 0) return null;
+      var d = x.H.temperature_2m[x.idx] - x.H.temperature_2m[j];
+      return { v: (Math.abs(d) < 0.5 ? '±0' : signed(d)) + '°', s: 'учора о цій порі ' + round(x.H.temperature_2m[j]) + '°' };
+    } },
+  tmrw: { n: 'Завтра', c: 'weather', ex: 'Коротко про завтра: погода, максимум, мінімум, опади і на скільки тепліше чи холодніше, ніж сьогодні.',
+    f: function (x) {
+      var D = x.D, mx = D.temperature_2m_max[1], d = mx - D.temperature_2m_max[0], p = D.precipitation_probability_max[1] || 0;
+      return { v: icon(D.weather_code[1], 1) + ' ' + round(mx) + '°',
+        s: 'мін ' + round(D.temperature_2m_min[1]) + '° · ' + (p >= 20 ? '💧' + p + '%' : 'сухо') + ' · ' + (d >= 1 ? '↑' + round(d) + '°' : d <= -1 ? '↓' + round(-d) + '°' : '≈ як сьогодні') };
+    } },
+  night: { n: 'Мінімум уночі', c: 'weather', ex: 'Найнижча температура до 9-ї ранку і коли вона буде. До +3° можливий іній на траві й машинах, нижче нуля — мороз і ожеледиця.',
+    f: function (x) {
+      var H = x.H, end = H.time.indexOf((x.now.getHours() < 9 ? x.D.time[0] : x.D.time[1]) + 'T09:00');
+      if (end < x.idx) end = nextN(x, 18);
+      var m = minAt(H.temperature_2m, x.idx, end);
+      return { v: round(m[0]) + '°', s: 'о ' + hh(H.time[m[1]]) + (m[0] <= 0 ? ' · мороз' : m[0] <= 3 ? ' · можливий іній' : ''), k: m[0] <= 0 ? 'bad' : m[0] <= 3 ? 'warn' : '' };
+    } },
+
+  /* --- rain & hazards --- */
+  rain: { n: 'Опади сьогодні', c: 'wet', ex: 'Скільки міліметрів опадів очікується за весь день. 1 мм — ледь мокрий асфальт, 5 мм — помітний дощ, 20+ мм — злива.',
+    f: function (x) {
+      var sum = x.D.precipitation_sum[0] || 0, p = x.D.precipitation_probability_max[0] || 0;
+      return { v: (sum >= 10 ? round(sum) : sum.toFixed(1)) + '<small>мм</small>', s: 'ймовірність до ' + p + '%', k: p >= 60 ? 'warn' : '' };
+    } },
+  rainNext: { n: 'Найближчий дощ', c: 'wet', ex: 'Коли почнеться найближчий дощ. На першу пару годин — за 15-хвилинним прогнозом, далі — за погодинним на 3 доби вперед.',
+    f: function (x) {
+      var H = x.H, M = x.M, i, end = Math.min(x.idx + 72, H.time.length);
+      if (x.C.precipitation >= 0.1 || (M && M.precipitation && M.precipitation[0] >= 0.1)) {
+        for (i = x.idx + 1; i < end; i++) if ((H.precipitation[i] || 0) < 0.1 && (H.precipitation_probability[i] || 0) < 40) break;
+        return { v: 'Іде зараз', s: i < end ? 'вщухне близько ' + hh(H.time[i]) : 'надовго', k: 'warn' };
+      }
+      if (M && M.precipitation) for (i = 1; i < M.precipitation.length; i++) if (M.precipitation[i] >= 0.1) {
+        var mins = Math.max(5, Math.round((new Date(M.time[i]) - x.now) / 60000));
+        return { v: 'за ' + mins + '<small>хв</small>', s: 'о ' + hh(M.time[i]) + ' · ' + M.precipitation[i].toFixed(1) + ' мм', k: 'warn' };
+      }
+      for (i = x.idx + 1; i < end; i++) {
+        var p = H.precipitation_probability[i] || 0;
+        if (p >= 50 || (H.precipitation[i] || 0) >= 0.3) return { v: hh(H.time[i]), s: (dayWord(x.D, H.time[i]) || 'сьогодні ') + '· ймовірність ' + p + '%', k: i - x.idx <= 3 ? 'warn' : '' };
+      }
+      return { v: 'Сухо', s: 'щонайменше 3 доби', k: 'good' };
+    } },
+  weekRain: { n: 'Опади за тиждень', c: 'wet', ex: 'Скільки опадів очікується за наступні 7 днів і скільки з них будуть дощовими (від 1 мм).',
+    f: function (x) {
+      var s = 0, n = 0;
+      for (var i = 1; i < Math.min(8, x.D.time.length); i++) { var v = x.D.precipitation_sum[i] || 0; s += v; if (v >= 1) n++; }
+      return { v: (s >= 10 ? round(s) : s.toFixed(1)) + '<small>мм</small>', s: n ? 'дощових днів: ' + n + ' з 7' : 'тиждень сухий', k: n ? '' : 'good' };
+    } },
+  storm: { n: 'Грози', c: 'wet', ex: 'Чи є в прогнозі гроза на 12 годин і скільки енергії для неї в повітрі (CAPE). До 300 Дж/кг спокійно, 1000+ — можливі грози, 2000+ — сильні грози з градом.',
+    f: function (x) {
+      var H = x.H, last = nextN(x, 12), c = maxAt(H.cape, x.idx, last), st = -1;
+      for (var i = x.idx; i <= last; i++) if (H.weather_code[i] >= 95) { st = i; break; }
+      var L = c[0] < 300 ? ['спокійно', 'good'] : c[0] < 1000 ? ['слабкий ризик', ''] : c[0] < 2000 ? ['помірний ризик', 'warn'] : ['високий ризик', 'bad'];
+      if (st >= 0) return { v: '⛈️ ' + hh(H.time[st]), s: 'можлива гроза · CAPE ' + round(c[0]), k: 'bad' };
+      return { v: L[0], s: 'CAPE до ' + round(c[0]) + ' Дж/кг', k: L[1] };
+    } },
+  snow: { n: 'Сніг', c: 'wet', ex: 'Скільки сантиметрів снігу може випасти за тиждень і чи лежить він зараз.',
+    f: function (x) {
+      var s = 0;
+      for (var i = 0; i < Math.min(8, x.D.time.length); i++) s += x.D.snowfall_sum[i] || 0;
+      var dep = (x.H.snow_depth[x.idx] || 0) * 100;
+      return { v: round(s) + '<small>см</small>', s: dep >= 1 ? 'лежить ' + round(dep) + ' см' : s > 0 ? 'за тиждень' : 'снігу не буде', k: s >= 5 ? 'warn' : '' };
+    } },
+  freeze: { n: 'Нульова ізотерма', c: 'wet', ex: 'Висота, на якій температура 0°. Сніг зазвичай лежить приблизно на 300 м нижче — видно, чи побіліють Альпи й Бергамські Преальпи. Якщо ізотерма опускається нижче ~700 м, сніг можливий і вдома.',
+    f: function (x) {
+      var fl = x.H.freezing_level_height[x.idx];
+      if (!num(fl)) return null;
+      return { v: fmtInt(round(fl / 50) * 50) + '<small>м</small>', s: 'сніг вище ~' + fmtInt(Math.max(0, round((fl - 300) / 100) * 100)) + ' м', k: fl < 1200 ? 'warn' : '' };
+    } },
+
+  /* --- sun & sky --- */
+  uv: { n: 'УФ-індекс', c: 'sky', ex: '0–2 низький, 3–5 помірний (крем у полудень), 6–7 високий, 8–10 дуже високий, 11+ екстремальний. Показано поточне значення і максимум дня.',
+    f: function (x) {
+      var mx = x.D.uv_index_max[0] || 0, L = uvLevel(mx);
+      return { v: round(x.C.uv_index || 0) + '<small>зараз</small>', s: 'макс ' + round(mx) + ' · ' + L[0], k: L[1] };
+    } },
+  sun: { n: 'Світловий день', c: 'sky', ex: 'Скільки триває світловий день, коли схід і захід сонця і на скільки хвилин завтрашній день довший чи коротший.',
+    f: function (x) {
+      var D = x.D, dd = Math.round((D.daylight_duration[1] - D.daylight_duration[0]) / 60);
+      return { v: durHM(D.daylight_duration[0]) + '<small>год</small>', s: hh(D.sunrise[0]) + '–' + hh(D.sunset[0]) + ' · завтра ' + (dd >= 0 ? '+' : '−') + Math.abs(dd) + ' хв' };
+    } },
+  sunshine: { n: 'Сонце сьогодні', c: 'sky', ex: 'Скільки годин сьогодні світитиме сонце (не за хмарами) і яка це частка світлового дня.',
+    f: function (x) {
+      var D = x.D, s = D.sunshine_duration[0] / 3600, share = s / (D.daylight_duration[0] / 3600);
+      return { v: s.toFixed(1) + '<small>год</small>', s: round(share * 100) + '% дня · завтра ' + (D.sunshine_duration[1] / 3600).toFixed(1) + ' год', k: share >= 0.6 ? 'good' : '' };
+    } },
+  golden: { n: 'Золота година', c: 'sky', ex: 'Найгарніше світло для фото: година після сходу і година перед заходом сонця. «Синя година» — пів години сутінків до сходу й після заходу.',
+    f: function (x) {
+      var D = x.D, nm = x.now.getHours() * 60 + x.now.getMinutes();
+      var sr0 = toMin(hh(D.sunrise[0])), ss = toMin(hh(D.sunset[0])), sr1 = toMin(hh(D.sunrise[1])), r;
+      if (nm < sr0 + 60) r = { v: minToHM(sr0), s: 'синя з ' + minToHM(sr0 - 30) + ' · золота до ' + minToHM(sr0 + 60), live: nm >= sr0 - 30 };
+      else if (nm < ss + 30) r = { v: minToHM(ss - 60), s: 'золота до ' + minToHM(ss) + ' · синя до ' + minToHM(ss + 30), live: nm >= ss - 60 };
+      else r = { v: minToHM(sr1), s: 'завтра · золота до ' + minToHM(sr1 + 60) };
+      if (r.live) { r.s = 'зараз! ' + r.s; r.k = 'good'; }
+      return r;
+    } },
+  moon: { n: 'Місяць', c: 'sky', ex: 'Фаза Місяця і яка частина диска освітлена. Рахується астрономічно, інтернет не потрібен.',
+    f: function (x) {
+      var m = moonInfo(x.now);
+      return { v: m.icon + ' ' + round(m.ill * 100) + '<small>%</small>', s: m.name + ' · ' + (m.toFull < m.toNew ? 'повня ' + inDays(m.toFull) : 'новий ' + inDays(m.toNew)) };
+    } },
+  solar: { n: 'Сонячна енергія', c: 'sky', ex: 'Скільки сонячної енергії падає на землю зараз (Вт/м²) і за весь день. Корисно для сонячних панелей: 1 кВт·год/м² за день — похмуро, 5+ — чудовий сонячний день.',
+    f: function (x) {
+      return { v: round(x.H.shortwave_radiation[x.idx]) + '<small>Вт/м²</small>', s: 'за день ' + (x.D.shortwave_radiation_sum[0] / 3.6).toFixed(1) + ' кВт·год/м²' };
+    } },
+
+  /* --- air --- */
+  aqi: { n: 'Повітря', c: 'air', ex: 'Європейський індекс якості повітря (EAQI): 0–20 добре, 20–40 задовільно, 40–60 помірно, 60–80 погано, 80–100 дуже погано. PM2.5 — дрібний пил у мкг/м³.',
+    f: function (x) {
+      var a = x.aq;
+      if (!a || !num(a.european_aqi)) return null;
+      var L = aqiLevel(a.european_aqi);
+      return { v: round(a.european_aqi) + '<small>EAQI</small>', s: L[0] + ' · PM2.5 ' + round(a.pm2_5), k: L[1] };
+    } },
+  pm: { n: 'Пил PM2.5', c: 'air', ex: 'Дрібний пил, що проникає глибоко в легені: вихлопи, опалення, пил. До 10 мкг/м³ чисто, 25+ погано, 50+ — краще не провітрювати. Поруч — більший пил PM10.',
+    f: function (x) {
+      var a = x.aq;
+      if (!a || !num(a.pm2_5)) return null;
+      var L = band(a.pm2_5, [10, 20, 25, 50], AIR_WORDS);
+      return { v: round(a.pm2_5) + '<small>мкг/м³</small>', s: L[0] + ' · PM10 ' + round(a.pm10), k: L[1] };
+    } },
+  ozone: { n: 'Озон', c: 'air', ex: 'Приземний озон утворюється в спеку на сонці з вихлопних газів. Найвищий удень улітку. Понад 130 мкг/м³ — краще не бігати й не тренуватися надворі.',
+    f: function (x) {
+      var a = x.aq;
+      if (!a || !num(a.ozone)) return null;
+      var L = band(a.ozone, [50, 100, 130, 240], AIR_WORDS);
+      return { v: round(a.ozone) + '<small>мкг/м³</small>', s: L[0], k: L[1] };
+    } },
+  no2: { n: 'NO₂ (вихлопи)', c: 'air', ex: 'Діоксид азоту — головно від машин. Високий уранці й увечері в години пік. До 40 мкг/м³ добре, 120+ погано.',
+    f: function (x) {
+      var a = x.aq;
+      if (!a || !num(a.nitrogen_dioxide)) return null;
+      var L = band(a.nitrogen_dioxide, [40, 90, 120, 230], AIR_WORDS);
+      return { v: round(a.nitrogen_dioxide) + '<small>мкг/м³</small>', s: L[0], k: L[1] };
+    } },
+  pollen: { n: 'Пилок', c: 'air', ex: 'Пилок у повітрі для алергіків: вільха, береза, злаки, полин, оливка, амброзія (найалергенніша, тому рахується втричі суворіше). Дані є лише в сезон цвітіння.',
+    f: function (x) {
+      var a = x.aq, best = null, bv = -1, any = false;
+      if (!a) return null;
+      POLLEN.forEach(function (p) {
+        var v = a[p[0]];
+        if (!num(v)) return;
+        any = true;
+        var sc = p[0] === 'ragweed_pollen' ? v * 3 : v;
+        if (sc > bv) { bv = sc; best = [p[1], v]; }
+      });
+      if (!any) return { v: '—', s: 'немає даних для регіону' };
+      var L = bv < 1 ? ['Немає', 'good'] : bv < 10 ? ['Низький', 'good'] : bv < 50 ? ['Помірний', 'warn'] : bv < 150 ? ['Високий', 'bad'] : ['Дуже високий', 'bad'];
+      return { v: L[0], s: bv < 1 ? 'зараз не сезон' : best[0] + ' · ' + round(best[1]) + ' шт/м³', k: L[1] };
+    } },
+
+  /* --- household --- */
+  laundry: { n: 'Сушка білизни', c: 'life', ex: 'Чи висохне білизна надворі за найближчі 6 годин (увечері — завтра з 10:00): враховує дощ, температуру, вологість, вітер і сонце.',
+    f: function (x) {
+      var H = x.H, from = x.idx, tomorrow = x.now.getHours() >= 16 || !H.is_day[x.idx];
+      if (tomorrow) from = H.time.indexOf(x.D.time[1] + 'T10:00');
+      if (from < 0) return null;
+      var to = Math.min(from + 5, H.time.length - 1), rainAt = -1, t = 0, rh = 0, ws = 0, sw = 0, n = 0;
+      for (var i = from; i <= to; i++) {
+        if (rainAt < 0 && ((H.precipitation_probability[i] || 0) >= 40 || (H.precipitation[i] || 0) >= 0.2)) rainAt = i;
+        t += H.temperature_2m[i]; rh += H.relative_humidity_2m[i]; ws += H.wind_speed_10m[i]; sw += H.shortwave_radiation[i] || 0; n++;
+      }
+      t /= n; rh /= n; ws /= n; sw /= n;
+      var pre = tomorrow ? 'завтра: ' : '';
+      if (rainAt >= 0) return { v: 'Ні', s: pre + 'дощ о ' + hh(H.time[rainAt]), k: 'bad' };
+      var score = (t - 5) / 15 + ws / 15 + (100 - rh) / 50 + sw / 400;
+      var L = score >= 3 ? ['Чудово', 'good'] : score >= 2 ? ['Добре', 'good'] : ['Повільно', 'warn'];
+      return { v: L[0], s: pre + round(t) + '°, ' + round(rh) + '%, вітер ' + round(ws), k: L[1] };
+    } },
+  walk: { n: 'Час для прогулянки', c: 'life', ex: 'Найприємніша година сьогодні між 7:00 і 21:00 (увечері — завтра): тепло близько +21° за відчуттями, без дощу, без сильного вітру і пекучого сонця.',
+    f: function (x) {
+      var H = x.H, D = x.D, start = x.idx, end = H.time.indexOf(D.time[0] + 'T21:00'), pre = '';
+      if (end <= start) { start = H.time.indexOf(D.time[1] + 'T07:00'); end = start + 14; pre = 'завтра · '; }
+      if (start < 0) return null;
+      var best = -1, bs = -1e9;
+      for (var i = start; i <= Math.min(end, H.time.length - 1); i++) {
+        if (+H.time[i].slice(11, 13) < 7) continue;
+        var p = H.precipitation_probability[i] || 0, g = H.wind_gusts_10m[i] || 0;
+        var s = -Math.abs(H.apparent_temperature[i] - 21) - p / 8 - ((H.precipitation[i] || 0) > 0.1 ? 12 : 0) - Math.max(0, g - 25) / 4 - ((H.uv_index[i] || 0) >= 7 ? 3 : 0) + (H.is_day[i] ? 2 : 0);
+        if (s > bs) { bs = s; best = i; }
+      }
+      if (best < 0) return null;
+      var pb = H.precipitation_probability[best] || 0;
+      return { v: hh(H.time[best]), s: pre + round(H.apparent_temperature[best]) + '° · ' + (pb < 20 ? 'сухо' : '💧' + pb + '%') + ' · вітер ' + round(H.wind_speed_10m[best]), k: bs > -5 ? 'good' : '' };
+    } },
+  garden: { n: 'Сад: ґрунт і полив', c: 'life', ex: 'Температура ґрунту на глибині 6 см (насіння більшості овочів сходить від +10°) і чи треба поливати: скільки дощу випаде за 3 дні.',
+    f: function (x) {
+      var r = 0;
+      for (var i = 0; i < Math.min(3, x.D.time.length); i++) r += x.D.precipitation_sum[i] || 0;
+      return { v: round(x.H.soil_temperature_6cm[x.idx]) + '°<small>ґрунт</small>', s: r >= 5 ? 'полив не треба · ' + round(r) + ' мм за 3 дні' : 'варто полити · дощу ' + r.toFixed(1) + ' мм', k: r >= 5 ? 'good' : 'warn', l: 'Сад' };
+    } },
+  car: { n: 'Мити авто?', c: 'life', ex: 'Чи є сенс мити машину: «так», якщо найближчі 3 дні без дощу.',
+    f: function (x) {
+      var D = x.D, n = Math.min(5, D.time.length), i;
+      for (i = 0; i < n; i++) if ((D.precipitation_sum[i] || 0) >= 1 || (D.precipitation_probability_max[i] || 0) >= 60) break;
+      if (i >= 3) return { v: 'Так', s: 'сухо ' + (i >= n ? n + '+ днів' : i + ' ' + plural(i, 'день', 'дні', 'днів')), k: 'good' };
+      return { v: 'Почекай', s: 'дощ ' + (i === 0 ? 'сьогодні' : i === 1 ? 'завтра' : DAYS_ACC[dayOf(D.time[i])]), k: 'warn' };
+    } },
+
+  /* --- other --- */
+  city: { n: 'Інше місто', c: 'other', ex: 'Погода й місцевий час в іншому місті — наприклад, у рідних. Місто обирається у вікні вибору показника (⇄).',
+    f: function () {
+      var c = cfg.city2, s = state.city;
+      if (!s || s.key !== c.lat + ',' + c.lon) return { v: '…', s: 'завантажую', l: c.name };
+      var d = s.d, off = d.utc_offset_seconds || 0, t = new Date(Date.now() + off * 1000), dh = Math.round((off + new Date().getTimezoneOffset() * 60) / 360) / 10;
+      return { v: icon(d.current.weather_code, d.current.is_day) + ' ' + round(d.current.temperature_2m) + '°',
+        s: round(d.daily.temperature_2m_min[0]) + '…' + round(d.daily.temperature_2m_max[0]) + '° · ' + (dh === 0 ? 'той самий час' : (dh > 0 ? '+' : '−') + Math.abs(dh) + ' год'),
+        l: c.name + ' · ' + pad(t.getUTCHours()) + ':' + pad(t.getUTCMinutes()) };
+    } }
 };
-function explain(k) { $('exTitle').textContent = EXPLAIN[k][0]; $('exText').textContent = EXPLAIN[k][1]; $('explainModal').classList.add('on'); }
+
+function metricCtx(w, idx) { return { C: w.current, H: w.hourly, D: w.daily, M: w.minutely_15, idx: idx, aq: state.aqi && state.aqi.current, now: new Date() }; }
+function metricVal(id, x) {
+  try {
+    var r = METRICS[id].f(x);
+    return r && r.v !== undefined && !/NaN|undefined/.test(r.v + r.s) ? r : null;
+  } catch (e) { return null; }
+}
+function tileEl(slot) { return document.querySelector('.tile[data-slot="' + slot + '"]'); }
+function initTiles() {
+  SLOTS.forEach(function (slot) {
+    var el = tileEl(slot);
+    if (!el) return;
+    el.innerHTML = '<div class="label"></div><div class="tile-val num">--</div><div class="tile-sub">--</div>';
+    el.onclick = function () { tileTap(slot); };
+  });
+  syncTileNames();
+}
+function syncTileNames() {
+  SLOTS.forEach(function (slot) {
+    var m = METRICS[cfg.tiles[slot]];
+    if (!METRICS[cfg.tiles[slot]]) { cfg.tiles[slot] = DEFAULTS.tiles[slot]; m = METRICS[cfg.tiles[slot]]; }
+    WIDGETS[slot].name = m.n;
+    var el = tileEl(slot), sn = el && el.parentNode.parentNode.querySelector('.s-name');
+    if (sn) sn.textContent = m.n;
+    if (el && !state.w) el.children[0].textContent = m.n;
+  });
+}
+function renderTiles(w, idx) {
+  var x = metricCtx(w, idx);
+  SLOTS.forEach(function (slot) {
+    var el = tileEl(slot);
+    if (!el) return;
+    var id = cfg.tiles[slot], m = METRICS[id], r = metricVal(id, x) || { v: '—', s: 'немає даних' };
+    el.children[0].textContent = r.l || m.n;
+    el.children[1].innerHTML = r.v;
+    el.children[2].textContent = r.s || '';
+    el.children[2].className = 'tile-sub' + (r.k ? ' ' + r.k : '');
+  });
+}
+function tileTap(slot) {
+  if (editing) return;
+  var m = METRICS[cfg.tiles[slot]];
+  showInfo(m.n, m.ex, slot);
+}
+function showInfo(title, text, slot, html) {
+  $('exTitle').textContent = title;
+  if (html) $('exText').innerHTML = html; else $('exText').textContent = text;
+  var b = $('exSwap');
+  b.style.display = slot ? '' : 'none';
+  b.onclick = function () { closeModal('explainModal'); openPicker(slot); };
+  $('explainModal').classList.add('on');
+}
+
+/* ---------- picker: which metric goes into this window ---------- */
+var pickSlot = null;
+function openPicker(slot) {
+  pickSlot = slot;
+  var x = state.w ? metricCtx(state.w, state.idx) : null, used = {}, html = '';
+  SLOTS.forEach(function (s) { if (s !== slot && !layouts[orient][s].hidden) used[cfg.tiles[s]] = true; });
+  CATS.forEach(function (c) {
+    html += '<div class="pk-cat">' + c[1] + '</div><div class="pk-grid">';
+    for (var id in METRICS) {
+      var m = METRICS[id];
+      if (m.c !== c[0]) continue;
+      var r = x ? metricVal(id, x) : null, on = cfg.tiles[slot] === id;
+      html += '<button class="pk' + (on ? ' on' : '') + '" onclick="pickTile(\'' + id + '\')">' +
+        '<span class="pk-n">' + esc(id === 'city' ? cfg.city2.name : m.n) + (on ? ' <i>✓ зараз</i>' : used[id] ? ' <i>вже є</i>' : '') + '</span>' +
+        '<b class="num">' + (r ? r.v : '—') + '</b><small>' + esc(r ? r.s || '' : '') + '</small></button>';
+    }
+    html += '</div>';
+    if (c[0] === 'other') {
+      html += '<div class="pk-city"><div class="seg-row">';
+      CITY_PRESETS.forEach(function (p, i) { html += '<button class="chip" onclick="presetCity2(' + i + ')">' + p[0] + '</button>'; });
+      html += '</div><input type="text" id="city2Search" placeholder="Або знайди будь-яке місто…" autocomplete="off" oninput="onCity2Search()"><div class="results" id="city2Results"></div></div>';
+    }
+  });
+  $('tilePick').innerHTML = html;
+  $('tileModal').classList.add('on');
+  if (!state.city) loadCity(false, function () { if (pickSlot === slot && $('tileModal').classList.contains('on')) openPicker(slot); });
+}
+function pickTile(id) {
+  if (!pickSlot) return;
+  cfg.tiles[pickSlot] = id;
+  saveCfg();
+  syncTileNames();
+  if (state.w) renderTiles(state.w, state.idx);
+  if (id === 'city') loadCity(false);
+  closeModal('tileModal');
+}
+function setCity2(name, lat, lon) {
+  cfg.city2 = { name: name, lat: +(+lat).toFixed(3), lon: +(+lon).toFixed(3) };
+  state.city = null;
+  pickTile('city');
+}
+function presetCity2(i) { var p = CITY_PRESETS[i]; setCity2(p[0], p[1], p[2]); }
+var city2Timer = null;
+function onCity2Search() {
+  clearTimeout(city2Timer);
+  var q = $('city2Search').value.trim();
+  if (q.length < 2) { $('city2Results').innerHTML = ''; return; }
+  city2Timer = setTimeout(function () {
+    fetchJson('https://geocoding-api.open-meteo.com/v1/search?count=5&language=uk&name=' + encodeURIComponent(q), 10000).then(function (d) {
+      var box = $('city2Results');
+      box.innerHTML = '';
+      (d.results || []).forEach(function (r) {
+        var b = document.createElement('button');
+        b.appendChild(document.createTextNode(r.name + ' '));
+        var sm = document.createElement('small'); sm.textContent = [r.admin1, r.country].filter(Boolean).join(', '); b.appendChild(sm);
+        b.onclick = function () { setCity2(r.name, r.latitude, r.longitude); };
+        box.appendChild(b);
+      });
+      if (!d.results) box.innerHTML = '<div class="hint">Нічого не знайдено — спробуй латиницею</div>';
+    }).catch(function () {});
+  }, 350);
+}
+function cityInUse() {
+  for (var i = 0; i < SLOTS.length; i++) if (cfg.tiles[SLOTS[i]] === 'city' && !layouts[orient][SLOTS[i]].hidden) return true;
+  return false;
+}
+function loadCity(force, done) {
+  var c = cfg.city2, key = c.lat + ',' + c.lon;
+  if (!cityInUse() && !done) return;
+  if (!force && state.city && state.city.key === key && Date.now() - state.city.t < 25 * 60000) return;
+  fetchJson('https://api.open-meteo.com/v1/forecast?latitude=' + c.lat + '&longitude=' + c.lon +
+    '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1', 12000).then(function (d) {
+    state.city = { d: d, t: Date.now(), key: key };
+    if (state.w) renderTiles(state.w, state.idx);
+    if (done) done();
+  }).catch(function () {});
+}
+
+/* =========================================================
+   DAY DETAILS: tap a day in "Тиждень" (or the 24 h chart) → hour by hour
+   ========================================================= */
+var dayShown = 0;
+function openDay(di) {
+  var w = state.w;
+  if (!w || editing) return;
+  var H = w.hourly, D = w.daily, from, to, title;
+  if (di === 0) { from = state.idx; to = Math.min(from + 24, H.time.length - 1); title = 'Наступні 24 години'; }
+  else {
+    var d = D.time[di];
+    from = H.time.indexOf(d + 'T00:00');
+    if (from < 0) return;
+    to = Math.min(from + 23, H.time.length - 1);
+    title = (di === 1 ? 'Завтра' : DAYS[dayOf(d)]) + ', ' + parseInt(d.slice(8, 10), 10) + ' ' + MONTHS[+d.slice(5, 7) - 1];
+  }
+  dayShown = di;
+  var p = D.precipitation_probability_max[di] || 0, mm = D.precipitation_sum[di] || 0;
+  var chips = [icon(D.weather_code[di], 1) + ' ' + (DESC[D.weather_code[di]] || ''),
+    '🌡️ ' + round(D.temperature_2m_min[di]) + '…' + round(D.temperature_2m_max[di]) + '°',
+    p >= 10 ? '💧 ' + p + '%' + (mm >= 0.1 ? ' · ' + mm.toFixed(1) + ' мм' : '') : '💧 сухо',
+    '💨 пориви до ' + round(D.wind_gusts_10m_max[di]),
+    '🧴 УФ ' + round(D.uv_index_max[di] || 0),
+    '🌅 ' + hh(D.sunrise[di]) + ' · 🌇 ' + hh(D.sunset[di])];
+  if (D.sunshine_duration) chips.push('☀️ ' + (D.sunshine_duration[di] / 3600).toFixed(1) + ' год сонця');
+  $('dayTitle').textContent = title;
+  $('daySum').innerHTML = chips.map(function (c) { return '<span>' + c + '</span>'; }).join('');
+  var nowKey = w.current.time.slice(0, 13), ws = H.wind_speed_10m, wd = H.wind_direction_10m;
+  var rows = '<div class="dh head"><span>Час</span><span></span><span>Темп</span><span>Відч.</span><span>Опади</span><span class="w">Вітер · пориви</span></div>';
+  for (var i = from; i <= to; i++) {
+    var pr = H.precipitation_probability[i] || 0, m = H.precipitation[i] || 0;
+    rows += '<div class="dh' + (H.is_day[i] ? '' : ' nite') + (H.time[i].slice(0, 13) < nowKey ? ' past' : '') + '">' +
+      '<span class="num">' + hh(H.time[i]) + '</span><span class="ic">' + icon(H.weather_code[i], H.is_day[i]) + '</span>' +
+      '<span class="t num">' + round(H.temperature_2m[i]) + '°</span><span class="f num">' + round(H.apparent_temperature[i]) + '°</span>' +
+      '<span class="r num">' + (pr >= 5 || m >= 0.1 ? '<i style="width:' + Math.max(4, pr) + '%"></i>' + pr + '%' + (m >= 0.1 ? ' · ' + m.toFixed(1) + ' мм' : '') : '<em>—</em>') + '</span>' +
+      '<span class="w num">' + (ws ? round(ws[i]) + (wd ? '<b style="transform:rotate(' + (wd[i] + 180) + 'deg)">↑</b>' : '') + ' · ' : '') + round(H.wind_gusts_10m[i]) + '</span></div>';
+  }
+  $('dayHours').innerHTML = rows;
+  $('dayModal').classList.add('on');
+  $('dayHours').scrollTop = 0;
+}
+function daySpeech(di) {
+  var D = state.w.daily, p = D.precipitation_probability_max[di] || 0, mm = D.precipitation_sum[di] || 0, g = D.wind_gusts_10m_max[di] || 0;
+  var s = (di === 0 ? 'Сьогодні' : di === 1 ? 'Завтра' : DAYS[dayOf(D.time[di])]) + ': ' + (DESC[D.weather_code[di]] || '').toLowerCase() + '. ' +
+    'Максимум ' + round(D.temperature_2m_max[di]) + '°, мінімум ' + round(D.temperature_2m_min[di]) + '°.';
+  if (p >= 20) s += ' Ймовірність опадів ' + p + '%' + (mm >= 1 ? ', до ' + round(mm) + ' мм' : '') + '.';
+  else s += ' Без опадів.';
+  if (g >= 40) s += ' Пориви вітру до ' + round(g) + ' км/год.';
+  return s;
+}
+
+/* =========================================================
+   ALERTS: dangerous weather in the next 24 hours → a pill in the header
+   ========================================================= */
+function buildAlerts(w, idx) {
+  var H = w.hourly, last = Math.min(idx + 24, H.time.length - 1), out = [], i;
+  function arr(k) { return H[k] || []; }
+  function when(k) { return k === idx ? 'зараз' : dayWord(w.daily, H.time[k]) + 'о ' + hh(H.time[k]); }
+  for (i = idx; i <= last; i++) if (H.weather_code[i] >= 95) { out.push({ ic: '⛈️', t: 'Гроза', d: 'можлива ' + when(i), k: 'bad', kind: 'storm' }); break; }
+  var g = maxAt(H.wind_gusts_10m, idx, last);
+  if (g[0] >= 50) out.push({ ic: '💨', t: 'Сильний вітер', d: 'пориви до ' + round(g[0]) + ' км/год ' + when(g[1]), k: g[0] >= 70 ? 'bad' : 'warn', kind: 'wind' });
+  var best = 0, at = idx;
+  for (i = idx; i <= last - 2; i++) {
+    var s3 = (H.precipitation[i] || 0) + (H.precipitation[i + 1] || 0) + (H.precipitation[i + 2] || 0);
+    if (s3 > best) { best = s3; at = i; }
+  }
+  if (best >= 10) out.push({ ic: '🌧️', t: best >= 25 ? 'Дуже сильний дощ' : 'Сильний дощ', d: round(best) + ' мм за 3 год ' + when(at), k: best >= 25 ? 'bad' : 'warn', kind: 'rain' });
+  var sn = 0, snAt = -1, sf = arr('snowfall');
+  for (i = idx; i <= last; i++) if ((sf[i] || 0) > 0) { sn += sf[i]; if (snAt < 0) snAt = i; }
+  if (sn >= 1) out.push({ ic: '🌨️', t: 'Сніг', d: 'до ' + round(sn) + ' см за добу, початок ' + when(snAt), k: sn >= 10 ? 'bad' : 'warn', kind: 'snow' });
+  var tm = minAt(H.temperature_2m, idx, last);
+  if (tm[0] <= 0) out.push({ ic: '🧊', t: 'Мороз', d: 'до ' + round(tm[0]) + '° ' + when(tm[1]) + ', можлива ожеледиця', k: 'warn', kind: 'frost' });
+  var am = maxAt(H.apparent_temperature, idx, last);
+  if (am[0] >= 33) out.push({ ic: '🥵', t: 'Спека', d: 'відчувається до ' + round(am[0]) + '° ' + when(am[1]), k: am[0] >= 38 ? 'bad' : 'warn', kind: 'heat' });
+  var vis = arr('visibility');
+  for (i = idx; i <= last; i++) if (num(vis[i]) && vis[i] < 1000) { out.push({ ic: '🌫️', t: 'Туман', d: 'видимість ' + round(vis[i] / 10) * 10 + ' м ' + when(i), k: 'warn', kind: 'fog' }); break; }
+  var uv = maxAt(H.uv_index, idx, last);
+  if (uv[0] >= 8) out.push({ ic: '🧴', t: 'Дуже високий УФ', d: 'до ' + round(uv[0]) + ' ' + when(uv[1]), k: 'warn', kind: 'uv' });
+  out.sort(function (a, b) { return (b.k === 'bad') - (a.k === 'bad'); });
+  return out;
+}
+function renderAlerts(w, idx) {
+  var list = [];
+  try { list = buildAlerts(w, idx); } catch (e) {}
+  state.alerts = list;
+  var el = $('alertPill');
+  if (!list.length) { el.className = 'alert-pill'; return; }
+  el.className = 'alert-pill on ' + list[0].k;
+  el.textContent = list[0].ic + ' ' + list[0].t + (list.length > 1 ? ' +' + (list.length - 1) : '');
+}
+function openAlerts() {
+  var html = (state.alerts || []).map(function (a) {
+    return '<div class="al ' + a.k + '"><span>' + a.ic + '</span><div><b>' + a.t + '</b><br>' + a.d + '</div></div>';
+  }).join('');
+  showInfo('⚠️ Попередження на 24 години', '', null, html + '<div class="hint">Рахується з прогнозу для твого міста. Офіційні попередження — на сайті Protezione Civile / MeteoAlarm.</div>');
+}
+
+/* ---------- background glow follows the sky ---------- */
+function skyTint(C) {
+  var c = C.weather_code, g;
+  if (!C.is_day) g = c >= 95 ? '#231838' : isWetCode(c) ? '#0f2036' : '#121a38';
+  else if (c >= 95) g = '#2a1a3a';
+  else if (isSnowCode(c)) g = '#243344';
+  else if (isWetCode(c)) g = '#10283f';
+  else if (c === 45 || c === 48) g = '#262a31';
+  else if (c === 3) g = '#1c2333';
+  else if (c === 2) g = '#1f2740';
+  else g = '#2b2640';
+  document.body.style.setProperty('--glow', g);
+}
+
+/* =========================================================
+   VOICE: best available voice, natural Ukrainian phrasing, short sentences
+   ========================================================= */
+var ORD = ['', 'перш', 'друг', 'трет', 'четверт', "п'ят", 'шост', 'сьом', 'восьм', "дев'ят", 'десят', 'одинадцят', 'дванадцят', 'тринадцят', 'чотирнадцят', "п'ятнадцят", 'шістнадцят', 'сімнадцят', 'вісімнадцят', "дев'ятнадцят", 'двадцят'];
+function hourWord(h, gen) { // feminine ordinal: "о восьмій" (locative) / "до восьмої" (genitive)
+  if (h === 0 || h === 24) return gen ? 'півночі' : 'опівночі';
+  var pre = '', n = h;
+  if (h > 20) { pre = 'двадцять '; n = h - 20; }
+  var st = ORD[n];
+  return pre + st + (gen ? (st === 'трет' ? 'ьої' : 'ої') : 'ій');
+}
+function unitSay(s, forms) { // forms: 1, 2–4, 5+, fraction
+  var neg = /^[−-]/.test(s);
+  s = s.replace(/^[−+-]/, '');
+  var n = parseFloat(s.replace(',', '.')), frac = n % 1 !== 0;
+  return (neg && n !== 0 ? 'мінус ' : '') + s.replace(/[.,]/, '\u0001') + ' ' + (frac ? forms[3] : plural(n, forms[0], forms[1], forms[2]));
+}
+function sayify(t) {
+  t = t.replace(/[←-⇿⌀-➿️‍]|[\uD83C-\uD83E][\uDC00-\uDFFF]/g, '');
+  t = t.replace(/(^|[\s(,])(об|о|до|близько|після|з|від)\s+(\d{1,2}):(\d{2})/gi, function (m, pre, p, h, mm) {
+    h = +h;
+    var lp = p.toLowerCase(), gen = !(lp === 'о' || lp === 'об'), w = hourWord(h, gen), min = +mm ? ' ' + (+mm) : '';
+    if (h === 0 && !gen) return pre + w + min;
+    if (!gen) p = (p.charAt(0) === 'О' ? 'О' : 'о') + (/^один/.test(w) ? 'б' : '');
+    return pre + p + ' ' + w + min;
+  });
+  t = t.replace(/(\d{1,2}):(\d{2})/g, function (m, h, mm) { return unitSay(String(+h), ['година', 'години', 'годин', 'години']) + (+mm ? ' ' + (+mm) : ''); });
+  t = t.replace(/([−+-]?\d+(?:[.,]\d+)?)\s*°/g, function (m, n) { return unitSay(n, ['градус', 'градуси', 'градусів', 'градуса']); });
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*км\/год/g, function (m, n) { return unitSay(n, ['кілометр', 'кілометри', 'кілометрів', 'кілометра']) + ' на годину'; });
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*мм(?![а-яіїєґ])/g, function (m, n) { return unitSay(n, ['міліметр', 'міліметри', 'міліметрів', 'міліметра']); });
+  t = t.replace(/(\d+(?:[.,]\d+)?)\s*см(?![а-яіїєґ])/g, function (m, n) { return unitSay(n, ['сантиметр', 'сантиметри', 'сантиметрів', 'сантиметра']); });
+  t = t.replace(/(\d+)\s*м(?![а-яіїєґ])/g, function (m, n) { return unitSay(n, ['метр', 'метри', 'метрів', 'метра']); });
+  t = t.replace(/(\d+)\s*год(?![а-яіїєґ])/g, function (m, n) { return unitSay(n, ['година', 'години', 'годин', 'години']); });
+  t = t.replace(/(\d+)\s*%/g, function (m, n) { return unitSay(n, ['відсоток', 'відсотки', 'відсотків', 'відсотка']); });
+  t = t.replace(/(^|[^A-Za-z])UV(?![A-Za-z])/g, '$1ультрафіолет').replace(/УФ/g, 'ультрафіолет');
+  t = t.replace(/(\d)\s*…\s*(\d)/g, '$1 до $2');
+  t = t.replace(/\s*[—–·]\s*/g, ', ').replace(/[()]/g, ', ');
+  t = t.replace(/(\s*,\s*)+/g, ', ').replace(/,\s*([.!?])/g, '$1').replace(/\s{2,}/g, ' ').replace(/[,\s]+$/, '');
+  return t.replace(/\u0001/g, ',').trim();
+}
+function buildSpeech() {
+  var w = state.w;
+  if (!w) return '';
+  var C = w.current, D = w.daily, h = new Date().getHours(), parts = [];
+  parts.push(h >= 5 && h < 11 ? 'Доброго ранку!' : h >= 11 && h < 17 ? 'Доброго дня!' : h >= 17 && h < 22 ? 'Доброго вечора!' : 'Доброї ночі!');
+  var t = round(C.temperature_2m), f = round(C.apparent_temperature);
+  parts.push('Зараз ' + t + '°, ' + (DESC[C.weather_code] || '').toLowerCase() + '.');
+  if (Math.abs(f - t) >= 3) parts.push('Відчувається як ' + f + '°.');
+  if (h < 16) parts.push('Максимум сьогодні ' + round(D.temperature_2m_max[0]) + '°, уночі ' + round(D.temperature_2m_min[1]) + '°.');
+  var a = state.advice;
+  if (a) {
+    parts.push(a.head + '.');
+    a.items.forEach(function (it) { parts.push(it[1] + '.'); });
+  }
+  (state.alerts || []).forEach(function (al) {
+    if (/storm|wind|uv/.test(al.kind)) return; // already said in the advice
+    parts.push('Увага: ' + al.t.toLowerCase() + ', ' + al.d + '.');
+  });
+  if (h >= 16) parts.push(daySpeech(1));
+  if (h >= 5 && h < 11) parts.push('Гарного дня!');
+  return parts.join(' ');
+}
+
+function voiceScore(v) {
+  var s = 0;
+  if (/^uk/i.test(v.lang)) s += 100;
+  if (/premium|enhanced|neural|natural|online|покращ|преміум|улучш/i.test(v.name)) s += 20;
+  if (/google|microsoft|siri/i.test(v.name)) s += 5;
+  if (v.localService) s += 1;
+  return s;
+}
+function allVoices() { return ('speechSynthesis' in window && speechSynthesis.getVoices()) || []; }
+function pickVoice() {
+  var vs = allVoices(), best = null, bs = -1, i;
+  if (cfg.voice) for (i = 0; i < vs.length; i++) if (vs[i].voiceURI === cfg.voice) return vs[i];
+  for (i = 0; i < vs.length; i++) { var s = voiceScore(vs[i]); if (s > bs) { bs = s; best = vs[i]; } }
+  return bs >= 100 ? best : null; // only pick automatically when it speaks Ukrainian
+}
+function fillVoices() {
+  var sel = $('voiceSel');
+  if (!sel) return;
+  var vs = allVoices().slice().sort(function (a, b) { return voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name); });
+  var uk = vs.filter(function (v) { return /^uk/i.test(v.lang); }), other = vs.filter(function (v) { return !/^uk/i.test(v.lang); });
+  sel.innerHTML = '';
+  function add(parent, value, text) { var o = document.createElement('option'); o.value = value; o.textContent = text; parent.appendChild(o); }
+  add(sel, '', 'Автоматично — найкращий український');
+  if (uk.length) { var g1 = document.createElement('optgroup'); g1.label = 'Українські'; uk.forEach(function (v) { add(g1, v.voiceURI, v.name + (voiceScore(v) >= 120 ? ' ★' : '')); }); sel.appendChild(g1); }
+  if (other.length) { var g2 = document.createElement('optgroup'); g2.label = 'Інші мови (з акцентом)'; other.forEach(function (v) { add(g2, v.voiceURI, v.name + ' · ' + v.lang); }); sel.appendChild(g2); }
+  sel.value = cfg.voice || '';
+  if (sel.value !== (cfg.voice || '')) sel.value = '';
+  var apple = /Mac|iPhone|iPad/.test(navigator.platform || '') || /iPhone|iPad/.test(navigator.userAgent);
+  var hint = !('speechSynthesis' in window) ? 'Цей браузер не вміє озвучувати.' :
+    !vs.length ? 'Голоси ще завантажуються…' :
+    !uk.length ? 'На цьому пристрої немає українського голосу, тому звучить погано. ' + (apple ? 'iPad: Параметри → Універсальний доступ → Промовлений вміст → Голоси → Українська → Леся (покращений), завантаж і перезапусти сторінку.' : 'Встанови український голос у налаштуваннях системи (у Microsoft Edge є природний голос «Polina»).') :
+    !uk.some(function (v) { return voiceScore(v) >= 120; }) ? 'Порада: є живіший голос. ' + (apple ? 'iPad: Параметри → Універсальний доступ → Промовлений вміст → Голоси → Українська → завантаж «Леся (покращений)», перезапусти сторінку й обери його тут (★).' : 'Спробуй Microsoft Edge: там є природний голос «Polina (Natural)».') :
+    'Голос із ★ — найприродніший.';
+  $('voiceHint').textContent = hint;
+}
+if ('speechSynthesis' in window) {
+  if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', fillVoices);
+  else speechSynthesis.onvoiceschanged = fillVoices;
+}
+function voiceChanged() {
+  cfg.voice = $('voiceSel').value;
+  cfg.vRate = +$('vRate').value;
+  cfg.vPitch = +$('vPitch').value;
+  cfg.vMorning = $('vMorning').checked;
+  cfg.vChime = $('vChime').checked;
+  saveCfg();
+}
+
+var audioCtx = null;
+function chime() {
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = audioCtx || new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var t = audioCtx.currentTime + 0.02;
+    [[784, 0], [1175, 0.14]].forEach(function (n) {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, t + n[1]);
+      g.gain.exponentialRampToValueAtTime(0.16, t + n[1] + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + n[1] + 0.7);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t + n[1]); o.stop(t + n[1] + 0.75);
+    });
+  } catch (e) {}
+}
+function setSpeaking(on) { var b = $('speakBtn'); if (b) b.textContent = on ? '⏹' : '🔊'; }
+var noVoiceWarned = false;
+function speakText(text, noToggle) {
+  if (!('speechSynthesis' in window)) { toast('Цей браузер не вміє озвучувати'); return; }
+  var ss = speechSynthesis;
+  if (ss.speaking || ss.pending) { ss.cancel(); setSpeaking(false); if (!noToggle) return; }
+  if (!text) return;
+  var v = pickVoice();
+  if (!v && !noVoiceWarned) { noVoiceWarned = true; toast('На цьому пристрої немає українського голосу — дивись ⚙ → 🔊 Голос'); }
+  var parts = (sayify(text).match(/[^.!?]+[.!?]*/g) || []).map(function (s) { return s.trim(); }).filter(Boolean);
+  function utter(p, last) {
+    var u = new SpeechSynthesisUtterance(p);
+    u.lang = v ? v.lang : 'uk-UA';
+    if (v) u.voice = v;
+    u.rate = cfg.vRate || 1; u.pitch = cfg.vPitch || 1;
+    if (last) u.onend = u.onerror = function () { setSpeaking(false); };
+    return u;
+  }
+  setSpeaking(true);
+  // iOS only lets a page talk from a tap: start the queue right away (a silent word), then the real text after the chime
+  var lead = utter(' ', false); lead.volume = 0; ss.speak(lead);
+  if (cfg.vChime) chime();
+  setTimeout(function () { parts.forEach(function (p, i) { ss.speak(utter(p, i === parts.length - 1)); }); }, cfg.vChime ? 550 : 0);
+}
+function speak() {
+  cfg.vSaid = new Date().toDateString(); saveCfg();
+  speakText(buildSpeech());
+}
+function speakTest() { speakText('Привіт! Так звучатиме прогноз. Зараз 19°, ясно. Дощ почнеться о 16:00, ймовірність 70%.', true); }
+// first touch in the morning → the day's briefing (browsers only allow speech after a tap)
+document.addEventListener('pointerdown', function (ev) {
+  if (!cfg.vMorning || !state.w) return;
+  if (ev.target.closest && ev.target.closest('#speakBtn, .modal-bg, .edit-bar')) return;
+  var n = new Date(), h = n.getHours();
+  if (h < 5 || h >= 11 || cfg.vSaid === n.toDateString()) return;
+  speak();
+}, true);
 
 /* =========================================================
    WALL MODE: night dimming, wake lock, burn-in, auto-refresh
@@ -1838,15 +2584,6 @@ function pixelShift() {
 }
 setInterval(pixelShift, 4 * 60000);
 
-function speak() {
-  if (!('speechSynthesis' in window) || !state.speech) return;
-  speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(state.w ? 'Зараз ' + round(state.w.current.temperature_2m) + ' градусів. ' + state.speech : state.speech);
-  u.lang = 'uk-UA';
-  var voices = speechSynthesis.getVoices();
-  for (var i = 0; i < voices.length; i++) if (/^uk/i.test(voices[i].lang)) { u.voice = voices[i]; break; }
-  speechSynthesis.speak(u);
-}
 var toastTimer = null;
 function toast(msg) {
   var el = $('toast');
@@ -1952,6 +2689,10 @@ var WIDGETS = {
   pres:   { name: 'Тиск',          min: [3, 2] },
   uv:     { name: 'УФ-індекс',     min: [3, 2] },
   aqi:    { name: 'Повітря',       min: [3, 2] },
+  t7:     { name: 'Показник',      min: [3, 2] },
+  t8:     { name: 'Показник',      min: [3, 2] },
+  t9:     { name: 'Показник',      min: [3, 2] },
+  t10:    { name: 'Показник',      min: [3, 2] },
   map:    { name: 'Карта',         min: [4, 4] },
   chart:  { name: 'Графік 24 год', min: [5, 3] },
   week:   { name: 'Тиждень',       min: [6, 3] }
@@ -1960,10 +2701,12 @@ var GRIDS = { l: { cols: 24, rows: 18 }, p: { cols: 12, rows: 24 } };
 var DEFAULT_LAYOUT = { // [x, y, w, h]
   l: { now: [0, 0, 8, 3], advice: [0, 3, 8, 6],
        wind: [0, 9, 4, 3], rain: [4, 9, 4, 3], hum: [0, 12, 4, 3], pres: [4, 12, 4, 3], uv: [0, 15, 4, 3], aqi: [4, 15, 4, 3],
-       chart: [8, 0, 10, 5], week: [8, 5, 10, 13], map: [18, 0, 6, 18] },
+       chart: [8, 0, 10, 5], week: [8, 5, 10, 13], map: [18, 0, 6, 18],
+       t7: [0, 0, 4, 3, 1], t8: [4, 0, 4, 3, 1], t9: [0, 3, 4, 3, 1], t10: [4, 3, 4, 3, 1] }, // extra windows start hidden
   p: { now: [0, 0, 6, 5], advice: [6, 0, 6, 5],
        wind: [0, 5, 4, 2], rain: [4, 5, 4, 2], hum: [8, 5, 4, 2], pres: [0, 7, 4, 2], uv: [4, 7, 4, 2], aqi: [8, 7, 4, 2],
-       map: [0, 9, 12, 5], chart: [0, 14, 12, 4], week: [0, 18, 12, 6] }
+       map: [0, 9, 12, 5], chart: [0, 14, 12, 4], week: [0, 18, 12, 6],
+       t7: [0, 0, 4, 2, 1], t8: [4, 0, 4, 2, 1], t9: [8, 0, 4, 2, 1], t10: [0, 2, 4, 2, 1] }
 };
 var editing = false, drag = null, ghost = null, cardObserver = null;
 var orient = curOrient();
@@ -1973,7 +2716,7 @@ function curOrient() { return window.innerWidth >= window.innerHeight ? 'l' : 'p
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function defaultFor(o) {
   var out = {};
-  for (var id in DEFAULT_LAYOUT[o]) { var r = DEFAULT_LAYOUT[o][id]; out[id] = { x: r[0], y: r[1], w: r[2], h: r[3], hidden: false }; }
+  for (var id in DEFAULT_LAYOUT[o]) { var r = DEFAULT_LAYOUT[o][id]; out[id] = { x: r[0], y: r[1], w: r[2], h: r[3], hidden: !!r[4] }; }
   return out;
 }
 function overlap(a, b) { return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
@@ -1997,7 +2740,11 @@ function loadLayouts() {
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem('wos.layout3') || '{}') || {}; } catch (e) {}
   var out = {};
-  ['l', 'p'].forEach(function (o) { out[o] = validLayout(saved[o], o) ? saved[o] : defaultFor(o); });
+  ['l', 'p'].forEach(function (o) {
+    var L = saved[o];
+    if (L && typeof L === 'object') { var d = defaultFor(o); for (var id in WIDGETS) if (!L[id]) L[id] = d[id]; } // windows added later arrive hidden
+    out[o] = validLayout(L, o) ? L : defaultFor(o);
+  });
   return out;
 }
 function saveLayouts() { try { localStorage.setItem('wos.layout3', JSON.stringify(layouts)); } catch (e) {} }
@@ -2084,7 +2831,7 @@ function toggleEdit() {
   $('board').classList.toggle('edit', editing);
   $('editBar').classList.toggle('on', editing);
   $('editBtn').style.borderColor = editing ? 'var(--accent)' : '';
-  if (editing) { closeModal('settingsModal'); closeModal('explainModal'); renderTray(); }
+  if (editing) { closeModal('settingsModal'); closeModal('explainModal'); closeModal('dayModal'); closeModal('tileModal'); renderTray(); }
   else { ghost.classList.remove('on'); drag = null; }
   checkNight();
 }
@@ -2119,6 +2866,7 @@ function showWidget(id) {
   if (!spot) { ebNote('Немає вільного місця — зменш або сховай якесь вікно'); return; }
   r.x = spot.x; r.y = spot.y; r.w = spot.w; r.h = spot.h; r.hidden = false;
   saveLayouts(); applyLayout();
+  if (cfg.tiles[id] === 'city') loadCity(false);
 }
 var resetArmed = null;
 function resetLayout() {
@@ -2145,7 +2893,7 @@ function showGhost(r, bad) {
 function onDown(ev) {
   if (!editing || !ev.target.closest) return;
   var sh = ev.target.closest('.shield');
-  if (!sh || ev.target.closest('.s-x')) return;
+  if (!sh || ev.target.closest('.s-x') || ev.target.closest('.s-sw')) return;
   if (ev.button > 0) return;
   var el = sh.parentNode, id = el.getAttribute('data-id'), r = layouts[orient][id];
   ev.preventDefault();
@@ -2202,6 +2950,7 @@ function initBoard() {
     sh.className = 'shield';
     sh.innerHTML = '<span class="s-name"></span><button class="s-x" title="Сховати" aria-label="Сховати">✕</button><span class="s-rz">◢</span>';
     sh.firstChild.textContent = WIDGETS[id].name;
+    if (SLOTS.indexOf(id) >= 0) { sh.className += ' has-sw'; sh.insertAdjacentHTML('beforeend', '<button class="s-sw" title="Інший показник" aria-label="Інший показник">⇄</button>'); }
     el.appendChild(sh);
   }
   ghost = document.createElement('div');
@@ -2216,6 +2965,8 @@ function initBoard() {
   board.addEventListener('click', function (ev) {
     var x = ev.target.closest && ev.target.closest('.s-x');
     if (x && editing) hideWidget(x.parentNode.parentNode.getAttribute('data-id'));
+    var sw = ev.target.closest && ev.target.closest('.s-sw');
+    if (sw && editing) openPicker(sw.parentNode.parentNode.getAttribute('data-id'));
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && editing) toggleEdit(); });
 
@@ -2232,6 +2983,7 @@ function initBoard() {
    BOOT
    ========================================================= */
 (function boot() {
+  initTiles();
   initBoard();
   $('locName').textContent = cfg.name;
   var cache = loadCache();
