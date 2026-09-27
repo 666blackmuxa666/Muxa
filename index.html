@@ -468,6 +468,11 @@
       </div>
     </div>
 
+    <div class="field"><span>Щоб планшет не блокувався сам</span>
+      <label class="chk"><input type="checkbox" id="keepAwake" onchange="keepToggle()"><span>Не давати екрану гаснути, поки відкрита сторінка (як під час відео)</span></label>
+      <div class="sleep-state" style="margin-top:.5em"><span id="keepInfo">…</span></div>
+    </div>
+
     <div class="hint">Сторінка не може вимкнути екран планшета: вона робить його темним або чорним. Щоб підсвітка зовсім згасла, увімкни в самому планшеті автоблокування.</div>
     <div style="margin-top:1.2em"><button class="btn primary" style="width:100%" onclick="closeSleep()">Готово</button></div>
   </div>
@@ -558,6 +563,7 @@ var DEFAULTS = {
   mapZoom: 6, mapMode: 'clouds', windyOverlay: 'clouds',
   tiles: { wind: 'wind', rain: 'rain', hum: 'hum', pres: 'pres', uv: 'uv', aqi: 'aqi', t7: 'car', t8: 'sunshine', t9: 'rainNext', t10: 'pollen' },
   city2: { name: 'Київ', lat: 50.45, lon: 30.52 },
+  keepAwake: true,
   voice: '', vRate: 1, vPitch: 1, vChime: true, vMorning: false, vSaid: ''
 };
 var cfg = loadCfg();
@@ -2537,6 +2543,8 @@ function openSleep() {
   $('slLevel').value = Math.round(cfg.nightLevel * 100); $('slLevelVal').textContent = Math.round(cfg.nightLevel * 100) + '%';
   markWake();
   updateSleepInfo();
+  $('keepAwake').checked = cfg.keepAwake !== false;
+  updateKeepInfo();
   $('sleepModal').classList.add('on');
 }
 function closeSleep() { nightPreviewUntil = 0; closeModal('sleepModal'); checkNight(); }
@@ -2570,14 +2578,59 @@ function updateSleepInfo() {
 }
 setInterval(checkNight, 5000);
 
-var wakeLock = null;
+/* ---------- keep the screen awake while the page is open (like a playing video) ----------
+   1) Screen Wake Lock where the browser has it, re-requested whenever it drops;
+   2) a tiny silent looping video — the NoSleep trick — where Wake Lock is missing or unreliable
+      (older iPad/iPhone, home-screen apps before iOS 18.4, Firefox). Both need one tap after a load. */
+var wakeLock = null, keepVideo = null, keepTouched = false;
+var KEEP_MP4 = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAbXbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAABWIgAArEQAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAApl0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAArEQAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAKxEAAAAAAABAAAAAAIRbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAUABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABvG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAXxzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFExhdmM2My4xLjEwMiBsaWJ4MjY0AAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMAKDxImSABAAVoy4PEyAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAAuIAAAAAAAAABhzdHRzAAAAAAAAAAEAAAAKAAAIAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAABAAAAAQAAADxzdHN6AAAAAAAAAAAAAAAKAAAChgAAAAsAAAALAAAACgAAAAoAAAAKAAAACgAAAAoAAAAKAAAACgAAADhzdGNvAAAAAAAAAAoAAAcaAAAJtAAACc8AAAnqAAAKCAAACiIAAAo8AAAKWgAACnQAAAqOAAADaXRyYWsAAABcdGtoZAAAAAMAAAAAAAAAAAAAAAIAAAAAAACsRAAAAAAAAAAAAAAAAQEAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAACRlZHRzAAAAHGVsc3QAAAAAAAAAAQAArEQAAAQAAAEAAAAAAuFtZGlhAAAAIG1kaGQAAAAAAAAAAAAAAAAAAFYiAACwRFXEAAAAAAAtaGRscgAAAAAAAAAAc291bgAAAAAAAAAAAAAAAFNvdW5kSGFuZGxlcgAAAAKMbWluZgAAABBzbWhkAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAJQc3RibAAAAH5zdHNkAAAAAAAAAAEAAABubXA0YQAAAAAAAAABAAAAAAAAAAAAAQAQAAAAAFYiAAAAAAA2ZXNkcwAAAAADgICAJQACAASAgIAXQBUAAAAAAB9AAAAC+gWAgIAFE4hW5QAGgICAAQIAAAAUYnRydAAAAAAAAB9AAAAC+gAAACBzdHRzAAAAAAAAAAIAAAAsAAAEAAAAAAEAAABEAAAAcHN0c2MAAAAAAAAACAAAAAEAAAABAAAAAQAAAAIAAAAFAAAAAQAAAAMAAAAEAAAAAQAAAAUAAAAFAAAAAQAAAAYAAAAEAAAAAQAAAAgAAAAFAAAAAQAAAAkAAAAEAAAAAQAAAAsAAAAFAAAAAQAAAMhzdHN6AAAAAAAAAAAAAAAtAAAAEwAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAAPHN0Y28AAAAAAAAACwAABwcAAAmgAAAJvwAACdoAAAn0AAAKEgAACiwAAApGAAAKZAAACn4AAAqYAAAAGnNncGQBAAAAcm9sbAAAAAIAAAAB//8AAAAcc2JncAAAAAByb2xsAAAAAQAAAC0AAAABAAAAYXVkdGEAAABZbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAsaWxzdAAAACSpdG9vAAAAHGRhdGEAAAABAAAAAExhdmY2My4xLjEwMgAAAAhmcmVlAAADrW1kYXTcAExhdmM2My4xLjEwMgACMEAOAAACcgYF//9u3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NSByMzIyMiBiMzU2MDVhIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyNSAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTAgcmVmPTMgZGVibG9jaz0xOi0zOi0zIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0yLjAwOjAuNzAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS00IHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj01IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4yMACAAAAADGWIhAUznJigAD+/gAEYIAcBGCAHARggBwEYIAcBGCAHAAAAB0GaOApnOoABGCAHARggBwEYIAcBGCAHAAAAB0GaVAKZzqABGCAHARggBwEYIAcBGCAHAAAABkGaYBTOdQEYIAcBGCAHARggBwEYIAcBGCAHAAAABkGagBTOdQEYIAcBGCAHARggBwEYIAcAAAAGQZqgFM51ARggBwEYIAcBGCAHARggBwAAAAZBmsAUznUBGCAHARggBwEYIAcBGCAHARggBwAAAAZBmuAUznUBGCAHARggBwEYIAcBGCAHAAAABkGbABPOdQEYIAcBGCAHARggBwEYIAcAAAAGQZsgEs51ARggBwEYIAcBGCAHARggBwEYIAc=';
+var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function keepOn() { return cfg.keepAwake !== false; }
 function requestWakeLock() {
-  if (!('wakeLock' in navigator) || document.hidden) return;
+  if (!keepOn() || document.hidden) return;
+  if (IS_IOS || !('wakeLock' in navigator)) startKeepVideo(); // iOS: the video too, its Wake Lock is not dependable everywhere
+  if (!('wakeLock' in navigator) || wakeLock) { updateKeepInfo(); return; }
   navigator.wakeLock.request('screen').then(function (l) {
     wakeLock = l;
-    l.addEventListener('release', function () { wakeLock = null; });
-  }).catch(function () {});
+    if (!IS_IOS && keepVideo) keepVideo.pause();
+    l.addEventListener('release', function () { wakeLock = null; updateKeepInfo(); setTimeout(requestWakeLock, 1000); });
+    updateKeepInfo();
+  }).catch(function () { startKeepVideo(); });
 }
+function startKeepVideo() {
+  if (!keepVideo) {
+    var v = document.createElement('video');
+    v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('muted', ''); v.setAttribute('aria-hidden', 'true');
+    v.muted = true; v.loop = true;
+    v.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1';
+    v.src = KEEP_MP4;
+    v.addEventListener('playing', updateKeepInfo);
+    v.addEventListener('pause', updateKeepInfo);
+    document.body.appendChild(v);
+    keepVideo = v;
+  }
+  if (keepVideo.paused) { var p = keepVideo.play(); if (p && p.catch) p.catch(function () { updateKeepInfo(); }); }
+}
+function keepToggle() {
+  cfg.keepAwake = $('keepAwake').checked; saveCfg();
+  if (keepOn()) requestWakeLock();
+  else { if (wakeLock) { var l = wakeLock; wakeLock = null; l.release().catch(function () {}); } if (keepVideo) keepVideo.pause(); }
+  updateKeepInfo();
+}
+function updateKeepInfo() {
+  var el = $('keepInfo');
+  if (!el) return;
+  var vid = keepVideo && !keepVideo.paused;
+  el.innerHTML = !keepOn() ? 'Вимкнено — планшет блокуватиметься за своїм «Автоблокуванням»' :
+    (wakeLock || vid) ? '<b style="color:var(--good)">🔆 Екран не гасне</b><br><small style="color:var(--muted)">' + (wakeLock && vid ? 'Wake Lock + відео-режим' : wakeLock ? 'Wake Lock' : 'відео-режим') + ' · режим енергозбереження все ж може погасити екран</small>' :
+    !keepTouched ? '<b style="color:var(--warn)">⚠️ Торкнись екрана один раз</b><br><small style="color:var(--muted)">після кожного перезавантаження сторінки браузер чекає одного дотику</small>' :
+    '<b style="color:var(--warn)">⚠️ Браузер не дозволив</b><br><small style="color:var(--muted)">вимкни «Автоблокування» в налаштуваннях пристрою</small>';
+}
+document.addEventListener('pointerdown', function () { keepTouched = true; requestWakeLock(); }, true);
+setInterval(function () { // things drop quietly (screen dimmed, app switch, iOS pausing media): pick them up again
+  if (!keepOn() || document.hidden) return;
+  if (!wakeLock || (keepVideo && keepVideo.paused && (IS_IOS || !wakeLock))) requestWakeLock();
+}, 15000);
 
 function pixelShift() {
   var dx = Math.round(Math.random() * 6 - 3), dy = Math.round(Math.random() * 6 - 3);
