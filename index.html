@@ -33,7 +33,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font, -apple-system), BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: clamp(12px, 1.75vmin, 24px);
     background: radial-gradient(1400px 900px at 10% -10%, var(--glow, #18223d) 0%, var(--bg) 60%) fixed, var(--bg);
     color: var(--text);
@@ -83,7 +83,20 @@
   html[data-theme] body { background: var(--bgimg) fixed, var(--bg); }
   html.glass .w-card, html.glass .modal { -webkit-backdrop-filter: blur(24px) saturate(1.6); backdrop-filter: blur(24px) saturate(1.6); }
   html.glass { --r: clamp(16px, 2.4vmin, 26px); }
-  html.glass body { font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  img.wi { width: 1.3em; height: 1.3em; vertical-align: -0.28em; margin: -0.15em -0.05em; }
+  .now-icon img.wi, .dr-ic img.wi { margin: -0.12em; width: 1.25em; height: 1.25em; }
+  span.wi { font-style: normal; }
+  html.ic-noto .wi { font-family: "Noto Color Emoji", sans-serif; }
+  html.ic-mono .wi { font-family: "Noto Emoji", sans-serif; color: var(--accent); font-weight: 500; }
+  .fn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9em, 1fr)); grid-gap: 0.5em; margin: 0.6em 0 1em; }
+  .fn { padding: 0.55em 0.7em; border-radius: 0.8em; border: 2px solid var(--line-strong); text-align: left; font-size: 1.05em; }
+  .fn small { display: block; font-size: 0.7em; color: var(--muted); }
+  .fn.on, .ics.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .ics { padding: 0.5em 0.7em; border-radius: 0.8em; border: 2px solid var(--line-strong); text-align: left; }
+  .ics { overflow: hidden; min-width: 0; }
+  .ics div { overflow: hidden; font-size: 1.5em; line-height: 1.3; white-space: nowrap; }
+  .ics b { font-size: 0.85em; }
+  .modal h4 { margin-top: 0.6em; font-size: 1em; }
   html[data-theme="ios"] { --bg:#000; --bgimg: radial-gradient(1200px 800px at 15% -10%, #10233f 0%, #000 60%); --panel: rgba(28,28,30,0.72); --panel-solid:#1c1c1e; --line: rgba(255,255,255,0.08); --line-strong: rgba(255,255,255,0.14); --text:#fff; --muted:#aeaeb2; --dim:#8e8e93; --accent:#0a84ff; --acc-rgb:10,132,255; --sky:#64d2ff; --warm:#ffd60a; --good:#30d158; --warn:#ffd60a; --bad:#ff453a; }
   html[data-theme="iosglass"] { --bg:#0b1030; --bgimg: radial-gradient(900px 700px at 0% 0%, #3a2c8f 0%, transparent 60%), radial-gradient(900px 700px at 100% 100%, #0f6c8f 0%, transparent 60%), linear-gradient(160deg,#141a4a,#07131f); --panel: rgba(255,255,255,0.10); --panel-solid: rgba(30,34,70,0.92); --line: rgba(255,255,255,0.18); --line-strong: rgba(255,255,255,0.26); --text:#fff; --muted:#d0d4f0; --dim:#9aa0c8; --accent:#5ac8fa; --acc-rgb:90,200,250; --sky:#64d2ff; --warm:#ffd60a; --good:#30d158; --warn:#ffd60a; --bad:#ff6961; }
   html[data-theme="light"] { --bg:#f2f2f7; --bgimg: linear-gradient(180deg,#e9eefb,#f2f2f7 50%); --panel: rgba(255,255,255,0.82); --panel-solid:#fff; --line: rgba(0,0,0,0.07); --line-strong: rgba(0,0,0,0.14); --text:#1c1c1e; --muted:#5b5b60; --dim:#8e8e93; --accent:#007aff; --acc-rgb:0,122,255; --sky:#0a84ff; --warm:#e0a100; --good:#248a3d; --warn:#c77c00; --bad:#d70015; }
@@ -543,8 +556,13 @@
   <div class="modal wide">
     <h3>🎨 Тема оформлення</h3>
     <div class="hint">Змінюються лише кольори та стиль. Розташування вікон не змінюється.</div>
+    <h4>Кольори</h4>
     <div class="th-grid" id="themeGrid"></div>
-    <div class="row"><button class="btn" onclick="setTheme('')">↺ Повернути як було</button><button class="btn primary" onclick="closeModal('themeModal')">Готово</button></div>
+    <h4>Картинки погоди</h4>
+    <div class="fn-grid" id="icGrid"></div>
+    <h4>Шрифт</h4>
+    <div class="fn-grid" id="fontGrid"></div>
+    <div class="row"><button class="btn" onclick="resetLook()">↺ Повернути все як було</button><button class="btn primary" onclick="closeModal('themeModal')">Готово</button></div>
   </div>
 </div>
 <div class="modal-bg" id="settingsModal" onclick="if(event.target===this)closeModal('settingsModal')">
@@ -595,7 +613,7 @@
    CONFIG
    ========================================================= */
 var DEFAULTS = {
-  theme: '',
+  theme: '', font: '', icons: '',
   lat: 45.73, lon: 9.65, name: 'Sorisole',
   leave: '08:00', back: '18:00',
   autoNight: true, nightFrom: '23:00', nightTo: '06:00', nightLevel: 0.85, wakeMin: 1,
@@ -648,7 +666,37 @@ var DESC = {
   80: 'Короткочасний дощ', 81: 'Злива', 82: 'Сильна злива', 85: 'Короткочасний сніг', 86: 'Сильний снігопад',
   95: 'Гроза', 96: 'Гроза з градом', 99: 'Сильна гроза з градом'
 };
+var MC = 'https://cdn.jsdelivr.net/npm/@bybas/weather-icons@2.0.0/production/';
+function mcName(code, d) {
+  var n = d ? 'day' : 'night';
+  if (code === 0) return 'clear-' + n;
+  if (code === 1 || code === 2) return 'partly-cloudy-' + n;
+  if (code === 3) return 'overcast';
+  if (code === 45 || code === 48) return 'fog-' + n;
+  if (code >= 51 && code <= 57) return 'partly-cloudy-' + n + '-drizzle';
+  if (code === 66 || code === 67) return 'sleet';
+  if (code >= 61 && code <= 65) return code === 61 ? 'partly-cloudy-' + n + '-rain' : 'rain';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return code === 71 || code === 85 ? 'partly-cloudy-' + n + '-snow' : 'snow';
+  if (code === 80) return 'partly-cloudy-' + n + '-rain';
+  if (code === 81 || code === 82) return 'rain';
+  if (code >= 96) return 'thunderstorms-' + n + '-rain';
+  if (code >= 95) return 'thunderstorms-' + n;
+  return 'not-available';
+}
+function iconUrl(code, isDay) {
+  var set = cfg.icons;
+  if (set !== 'meteo' && set !== 'meteoline') return '';
+  return MC + (set === 'meteo' ? 'fill' : 'line') + '/all/' + mcName(code, isDay !== 0) + '.svg';
+}
+// HTML icon in the chosen set (emoji sets are wrapped so a font can be applied)
 function icon(code, isDay) {
+  var u = iconUrl(code, isDay);
+  if (u) return '<img class="wi" src="' + u + '" alt="">';
+  var e = emo(code, isDay);
+  if (cfg.icons === 'mono') e = e.replace(/\uFE0F/g, '') + '\uFE0E';
+  return cfg.icons ? '<span class="wi">' + e + '</span>' : e;
+}
+function emo(code, isDay) {
   var d = isDay !== 0;
   if (code === 0) return d ? '☀️' : '🌙';
   if (code === 1) return d ? '🌤️' : '🌙';
@@ -742,7 +790,7 @@ function render() {
   $('nowPlace').textContent = cfg.name;
 
   // Now
-  $('nowIcon').textContent = icon(C.weather_code, C.is_day);
+  $('nowIcon').innerHTML = icon(C.weather_code, C.is_day);
   $('nowTemp').textContent = signedTemp(C.temperature_2m);
   $('nowDesc').textContent = DESC[C.weather_code] || '—';
   $('nowSub').textContent = 'Відчувається як ' + signedTemp(C.apparent_temperature) + ' · ' +
@@ -994,7 +1042,9 @@ function renderChart() {
     var hi = idx + i;
     svg += '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="' + (i === 0 ? fs / 3.2 : fs / 5) + '" fill="' + (i === 0 ? '#ec4899' : '#fbbf24') + '"/>';
     svg += '<text x="' + pts[i][0] + '" y="' + (pts[i][1] - fs * 0.6) + '" fill="#f8fafc" font-size="' + fs + '" font-weight="700" text-anchor="middle">' + round(H.temperature_2m[hi]) + '°</text>';
-    svg += '<text x="' + pts[i][0] + '" y="' + iconY + '" font-size="' + (fs * 1.85) + '" text-anchor="middle">' + icon(H.weather_code[hi], H.is_day[hi]) + '</text>';
+    var iu = iconUrl(H.weather_code[hi], H.is_day[hi]), isz = fs * 2.6;
+    svg += iu ? '<image href="' + iu + '" x="' + (pts[i][0] - isz / 2) + '" y="' + (iconY - isz * 0.75) + '" width="' + isz + '" height="' + isz + '"/>'
+      : '<text class="wi" x="' + pts[i][0] + '" y="' + iconY + '" font-size="' + (fs * 1.85) + '" text-anchor="middle"' + (cfg.icons === 'mono' ? ' fill="currentColor" style="color:var(--accent)"' : '') + '>' + (cfg.icons === 'mono' ? emo(H.weather_code[hi], H.is_day[hi]).replace(/\uFE0F/g, '') + '\uFE0E' : emo(H.weather_code[hi], H.is_day[hi])) + '</text>';
     svg += '<text x="' + pts[i][0] + '" y="' + (Hh - fs * 0.35) + '" fill="' + (i === 0 ? '#ec4899' : '#94a3b8') + '" font-size="' + (fs * 0.85) + '" font-weight="' + (i === 0 ? 700 : 500) + '" text-anchor="middle">' + (i === 0 ? 'Зараз' : hh(H.time[hi])) + '</text>';
   }
   svg += '</svg>';
@@ -3139,11 +3189,66 @@ function renderThemes() {
       '<b' + (t[0] === 'light' ? ' style="color:#1c1c1e;text-shadow:none"' : '') + '>' + t[1] + '</b></button>';
   }).join('');
 }
-function openTheme() { renderThemes(); $('themeModal').classList.add('on'); }
+
+var FONTS = [
+  ['', 'Системний (як було)', 'як на iPhone'],
+  ['Inter', 'Inter', 'чіткий, сучасний'],
+  ['Manrope', 'Manrope', 'мʼякий, округлий'],
+  ['Montserrat', 'Montserrat', 'широкий'],
+  ['Rubik', 'Rubik', 'дружній'],
+  ['Nunito', 'Nunito', 'круглий'],
+  ['Comfortaa', 'Comfortaa', 'легкий, геометричний'],
+  ['Exo 2', 'Exo 2', 'технічний'],
+  ['Roboto', 'Roboto', 'як на Android'],
+  ['Oswald', 'Oswald', 'вузький, високий'],
+  ['JetBrains Mono', 'JetBrains Mono', 'як на табло'],
+  ['Playfair Display', 'Playfair', 'класичний, з засічками'],
+  ['Caveat', 'Caveat', 'рукописний']
+];
+var ICSETS = [
+  ['', 'Emoji (як було)'],
+  ['meteo', 'Анімовані кольорові'],
+  ['meteoline', 'Анімовані лінії'],
+  ['noto', 'Google-стиль'],
+  ['mono', 'Контурні в колір теми']
+];
+var gfLoaded = {};
+function loadGF(fam) {
+  if (!fam || gfLoaded[fam]) return; gfLoaded[fam] = 1;
+  var l = document.createElement('link'); l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' + fam.replace(/ /g, '+') + (fam.indexOf('Emoji') >= 0 && fam.indexOf('Color') < 0 ? ':wght@500' : fam === 'Caveat' || fam === 'Oswald' ? ':wght@400;600;700' : ':wght@400;500;600;700;800') + '&display=swap';
+  document.head.appendChild(l);
+}
+function applyLook() {
+  var h = document.documentElement;
+  if (cfg.font) { loadGF(cfg.font); h.style.setProperty('--font', '"' + cfg.font + '", -apple-system, sans-serif'); } else h.style.removeProperty('--font');
+  h.classList.toggle('ic-noto', cfg.icons === 'noto'); h.classList.toggle('ic-mono', cfg.icons === 'mono');
+  if (cfg.icons === 'noto') loadGF('Noto Color Emoji');
+  if (cfg.icons === 'mono') loadGF('Noto Emoji');
+}
+function renderLook() {
+  $('fontGrid').innerHTML = FONTS.map(function (f) {
+    if (f[0]) loadGF(f[0]);
+    return '<button class="fn' + (cfg.font === f[0] ? ' on' : '') + '" style="font-family:' + (f[0] ? '\'' + f[0] + '\',' : '') + '-apple-system,sans-serif" onclick="setLook(\'font\',\'' + f[0] + '\')">' + f[1] + ' 23°<small>' + f[2] + '</small></button>';
+  }).join('');
+  var keep = cfg.icons;
+  $('icGrid').innerHTML = ICSETS.map(function (c) {
+    cfg.icons = c[0];
+    var sample = [0, 2, 63, 95].map(function (k) { return icon(k, 1); }).join(' ');
+    if (c[0] === 'noto') loadGF('Noto Color Emoji');
+    if (c[0] === 'mono') loadGF('Noto Emoji');
+    var st = c[0] === 'noto' ? ' style="font-family:\'Noto Color Emoji\'"' : c[0] === 'mono' ? ' style="font-family:\'Noto Emoji\';color:var(--accent)"' : '';
+    return '<button class="ics' + (keep === c[0] ? ' on' : '') + '" onclick="setLook(\'icons\',\'' + c[0] + '\')"><div' + st + '>' + sample + '</div><b>' + c[1] + '</b></button>';
+  }).join('');
+  cfg.icons = keep;
+}
+function setLook(k, v) { cfg[k] = v; saveCfg(); applyLook(); renderLook(); if (state.w) render(); }
+function resetLook() { cfg.font = ''; cfg.icons = ''; saveCfg(); applyLook(); setTheme(''); renderLook(); if (state.w) render(); }
+function openTheme() { renderThemes(); renderLook(); $('themeModal').classList.add('on'); }
 function setTheme(id) { cfg.theme = id; saveCfg(); applyTheme(); renderThemes(); }
 
 (function boot() {
-  applyTheme();
+  applyTheme(); applyLook();
   initTiles();
   initBoard();
   $('locName').textContent = cfg.name;
